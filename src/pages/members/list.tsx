@@ -93,7 +93,7 @@ export const MembersList = () => {
         minWidth: 200,
       },
       {
-        field: "why_PM",
+        field: "why_pm",
         headerName: "Why PM?",
         type: "string",
         minWidth: 100,
