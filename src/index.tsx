@@ -10,11 +10,10 @@ const root = createRoot(container);
 root.render(
   <React.StrictMode>
     <Auth0Provider
-      domain="dev-u7ugzhfyb6nhuby6.us.auth0.com"
-      clientId="qm1BBhb3g1KzdM6JPpHUmXUPkvHtIlDC"
-      audience="http://localhost:8000"
+      domain={import.meta.env.VITE_AUTH0_DOMAIN}
+      clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
         redirectUri={window.location.origin}
-        connection="UBC-PMC-ADMINS"
+        connection={import.meta.env.VITE_AUTH0_CONNECTION}
     >
       <App />
     </Auth0Provider>
