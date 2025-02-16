@@ -1,4 +1,4 @@
-name: Build and Deploy to Cloud Run (STAGING)
+name: Deploy to STAGING 
 
 on:
   workflow_dispatch:
