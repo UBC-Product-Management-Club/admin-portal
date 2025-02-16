@@ -112,7 +112,7 @@ function App() {
                     <RefineSnackbarProvider>
                         <DevtoolsProvider>
                             <Refine
-                                dataProvider={dataProvider(import.meta.env.VITE_BACKEND_API_URL)}
+                                dataProvider={dataProvider(import.meta.env.VITE_API_URL)}
                                 notificationProvider={useNotificationProvider}
                                 authProvider={authProvider}
                                 routerProvider={routerBindings}
