@@ -23,8 +23,8 @@ jobs:
 
       - name: Create env file
         run: |
-          touch .env
-          echo VITE_API_URL=${{ secrets.API_URL }} >> .env
+          touch .secret/.env
+          echo VITE_API_URL=${{ secrets.API_URL }} >> .secret/.env
 
       - name: Create Credential JSON
         id: create-json-1
