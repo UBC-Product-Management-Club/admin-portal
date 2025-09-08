@@ -11,16 +11,11 @@ export function meta() {
   ];
 }
 
-interface AuthError {
-  error: string;
-  description: string;
-}
-
 export default function Main() {
   const { loginWithRedirect } = useAuth0();
   const location = useLocation();
-  const error = location.state;
-  const [authError] = useState<AuthError>(error);
+  const state = location.state;
+  console.log(state);
 
   return (
     <main className="flex items-center justify-center pt-16 pb-4">
@@ -36,10 +31,10 @@ export default function Main() {
               PMC Admin Portal
             </p>
             <button onClick={() => loginWithRedirect()}>Login</button>
-            {authError && (
+            {state && state.error && state.description && (
               <Alert variant="destructive">
-                <AlertTitle>{authError.error}</AlertTitle>
-                <AlertDescription>{authError.description}</AlertDescription>
+                <AlertTitle>{state.error}</AlertTitle>
+                <AlertDescription>{state.description}</AlertDescription>
               </Alert>
             )}
           </nav>
