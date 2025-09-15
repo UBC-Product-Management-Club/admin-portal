@@ -9,7 +9,7 @@ import {
 
 import type { Route } from './+types/root';
 import './app.css';
-import { Auth0Provider } from '@auth0/auth0-react';
+import { UserDataProvider } from './providers/UserDataProvider';
 
 export const links: Route.LinksFunction = () => [
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
@@ -44,19 +44,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Auth0Provider
-      domain={import.meta.env.VITE_AUTH0_API_URL}
-      clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
-      authorizationParams={{
-        redirect_uri: window.location.origin + '/authorized',
-        audience: import.meta.env.VITE_API_URL,
-        connection: 'PMC-Google-Workspace-Connection',
-      }}
-      useRefreshTokens={true}
-      cacheLocation="localstorage"
-    >
+    <UserDataProvider>
       <Outlet />
-    </Auth0Provider>
+    </UserDataProvider>
   );
 }
 
