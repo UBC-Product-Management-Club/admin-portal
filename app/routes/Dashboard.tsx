@@ -1,33 +1,40 @@
-import type { Route } from './+types/Main';
-import { Link } from 'react-router';
-import { useAuth0 } from '@auth0/auth0-react';
+import { AppSidebar } from "@/components/app-sidebar"
+import { ChartAreaInteractive } from "@/components/chart-area-interactive"
+import { DataTable } from "@/components/data-table"
+import { SectionCards } from "@/components/section-cards"
+import { SiteHeader } from "@/components/site-header"
+import {
+  SidebarInset,
+  SidebarProvider,
+} from "@/components/ui/sidebar"
 
-export function meta() {
-  return [
-    { title: 'PMC Admin portal' },
-    { name: 'Dashboard', content: 'Welcome to React Router!' },
-  ];
-}
+import data from "./data.json"
 
-export default function Dashboard({
-  loaderData,
-  actionData,
-  params,
-  matches,
-}: Route.ComponentProps) {
-  const { user, logout } = useAuth0();
-
+export default function Page() {
   return (
-    <>
-      <h1>this is a dashboard</h1>
-      <p>Loader Data: {JSON.stringify(loaderData)}</p>
-      <p>Action Data: {JSON.stringify(actionData)}</p>
-      <p>Route Parameters: {JSON.stringify(params)}</p>
-      <p>Matched Routes: {JSON.stringify(matches)}</p>
-      <p>User: {JSON.stringify(user)}</p>
-      <Link to="/" onClick={() => logout}>
-        Logout
-      </Link>
-    </>
-  );
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <SectionCards />
+              <div className="px-4 lg:px-6">
+                <ChartAreaInteractive />
+              </div>
+              <DataTable data={data} />
+            </div>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  )
 }
