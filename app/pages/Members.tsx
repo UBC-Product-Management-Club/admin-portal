@@ -1,46 +1,27 @@
 import { useUserData } from '@/providers/UserDataProvider';
 import type { Route } from '../+types/root';
 import { useEffect, useState } from 'react';
+import { useAdmin } from '@/hooks/useAdmin';
 
 export default function Members({ loaderData, actionData, params, matches }: Route.ComponentProps) {
-  const { user, session } = useUserData();
+  const { user } = useUserData();
   const [userData, setUserData] = useState([]);
   const [error, setError] = useState('');
+  const { getUsers } = useAdmin();
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const url = import.meta.env.VITE_API_URL + '/api/v2/admin/users';
-
-        const res = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error(`Failed to fetch users: ${res.status}`);
-        }
-
-        const data = await res.json();
-        setUserData(data);
-        console.log(data);
-      } catch (errorMsg) {
-        setError((errorMsg as Error).message);
-      }
-    };
-
-    if (session?.access_token) {
-      fetchUsers();
-    }
-  }, []);
+    getUsers()
+      .then(setUserData)
+      .catch((e) => {
+        console.error(e);
+        setError(e);
+      });
+  }, [getUsers]);
 
   return (
     <>
       {error ? (
-        <>hi</>
+        <>{error.message}</>
       ) : (
         <>
           <h1>members page</h1>
