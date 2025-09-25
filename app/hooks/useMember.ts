@@ -2,7 +2,7 @@ import { useUserData } from "@/providers/UserDataProvider";
 import { AdminService } from "@/services/AdminService";
 import { useCallback, useMemo } from "react";
 
-function useAdmin() {
+function useMember() {
     const { session } = useUserData();
     const adminService = useMemo(() => new AdminService, [])
 
@@ -16,4 +16,4 @@ function useAdmin() {
     return { getUsers } 
 }
 
-export { useAdmin }
+export { useMember }

@@ -1,17 +1,21 @@
 import { useUserData } from '@/providers/UserDataProvider';
 import type { Route } from '../+types/root';
 import { useEffect, useState } from 'react';
-import { useAdmin } from '@/hooks/useAdmin';
+import { useMember } from '@/hooks/useMember';
+import UserDataTable from '@/components/user-data-table';
 
 export default function Members({ loaderData, actionData, params, matches }: Route.ComponentProps) {
   const { user } = useUserData();
   const [userData, setUserData] = useState([]);
   const [error, setError] = useState('');
-  const { getUsers } = useAdmin();
+  const { getUsers } = useMember();
 
   useEffect(() => {
     getUsers()
-      .then(setUserData)
+      .then((res) => {
+        console.log('getUsers() result:', res);
+        setUserData(res);
+      })
       .catch((e) => {
         console.error(e);
         setError(e);
@@ -33,11 +37,7 @@ export default function Members({ loaderData, actionData, params, matches }: Rou
           <p>User: {JSON.stringify(user)}</p>
           <div>
             <h1>THE USERS:</h1>
-            {userData.map((u, idx) => (
-              <p key={idx}>
-                {u.first_name} ({u.email})
-              </p>
-            ))}
+            <UserDataTable users={userData} />
           </div>
         </>
       )}
