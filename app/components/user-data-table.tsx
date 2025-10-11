@@ -8,7 +8,14 @@ import {
   getFilteredRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import type { ColumnDef, SortingState, ColumnFiltersState } from '@tanstack/react-table';
+import type {
+  ColumnDef,
+  SortingState,
+  ColumnFiltersState,
+  Column,
+  HeaderGroup,
+  Header,
+} from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -22,11 +29,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { User } from '@/lib/types';
+import { Filter } from 'lucide-react';
 
 export const columns: ColumnDef<User>[] = [
   {
     accessorKey: 'pfp',
     header: '',
+    enableColumnFilter: false,
     cell: ({ row }) => (
       <Avatar className="h-8 w-8">
         <AvatarImage src={row.getValue('pfp')} alt={row.getValue('display_name')} />
@@ -41,6 +50,7 @@ export const columns: ColumnDef<User>[] = [
   {
     accessorKey: 'display_name',
     header: 'Name',
+    enableColumnFilter: true,
     cell: ({ row }) => (
       <div>
         <div className="font-medium">{row.getValue('display_name')}</div>
@@ -53,6 +63,7 @@ export const columns: ColumnDef<User>[] = [
   {
     accessorKey: 'pronouns',
     header: 'Pronouns',
+    enableColumnFilter: true,
     cell: ({ row }) => (
       <Badge variant="outline" className="text-xs">
         {row.getValue('pronouns')}
@@ -62,16 +73,19 @@ export const columns: ColumnDef<User>[] = [
   {
     accessorKey: 'email',
     header: 'Email',
+    enableColumnFilter: true,
     cell: ({ row }) => <div className="text-sm">{row.getValue('email')}</div>,
   },
   {
     accessorKey: 'university',
     header: 'University',
+    enableColumnFilter: true,
     cell: ({ row }) => <div className="text-sm">{row.getValue('university')}</div>,
   },
   {
     accessorKey: 'year',
     header: 'Year',
+    enableColumnFilter: true,
     cell: ({ row }) => (
       <Badge variant="secondary" className="text-xs">
         {row.getValue('year')}
@@ -79,13 +93,21 @@ export const columns: ColumnDef<User>[] = [
     ),
   },
   {
+    accessorKey: 'faculty',
+    header: 'Faculty',
+    enableColumnFilter: true,
+    cell: ({ row }) => <div className="text-sm">{row.getValue('faculty')}</div>,
+  },
+  {
     accessorKey: 'major',
     header: 'Major',
+    enableColumnFilter: true,
     cell: ({ row }) => <div className="text-sm">{row.getValue('major')}</div>,
   },
   {
     accessorKey: 'is_payment_verified',
     header: 'Payment',
+    enableColumnFilter: true,
     cell: ({ row }) => (
       <Badge
         variant={row.getValue('is_payment_verified') ? 'default' : 'destructive'}
@@ -94,6 +116,11 @@ export const columns: ColumnDef<User>[] = [
         {row.getValue('is_payment_verified') ? 'Verified' : 'Pending'}
       </Badge>
     ),
+  },
+  {
+    accessorKey: 'why_pm',
+    header: 'Why PM?',
+    cell: ({ row }) => <div className="text-sm">{row.getValue('why_pm')}</div>,
   },
   {
     accessorKey: 'student_id',
@@ -107,7 +134,7 @@ export const columns: ColumnDef<User>[] = [
 export default function UserDataTable({ users }: { users: User[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = React.useState('');
+  const textBasedColumns = new Set(['']);
 
   const data = users;
 
@@ -120,11 +147,11 @@ export default function UserDataTable({ users }: { users: User[] }) {
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
+    // onGlobalFilterChange: setGlobalFilter,
     state: {
       sorting,
       columnFilters,
-      globalFilter,
+      //   globalFilter,
     },
     initialState: {
       pagination: {
@@ -133,20 +160,44 @@ export default function UserDataTable({ users }: { users: User[] }) {
     },
   });
 
+  const getFilterComponent = (header: Header<User, unknown>) => {
+    let component;
+    switch (header.column.id) {
+      case 'university':
+        component = (
+          <select
+            value={(header.column.getFilterValue() as string) ?? ''}
+            onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+            className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+          >
+            <option value="">Select a value</option>
+            <option value="University of British Columbia">University of British Columbia</option>
+            <option value="Simon Fraser University">Simon Fraser University</option>
+            <option value="British Columbia Institute of Technology">
+              British Columbia Institute of Technology
+            </option>
+            <option value="I'm not a university student">I'm not a university student</option>
+            <option value="Other">Other</option>
+          </select>
+        );
+        break;
+      default:
+        component = (
+          <Input
+            value={header.column.getFilterValue() as string}
+            onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+          />
+        );
+    }
+    return component;
+  };
+
   return (
     <div className="w-full p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Users</h2>
-          <p className="text-muted-foreground">Manage student registrations and payments</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Input
-            placeholder="Search users..."
-            value={globalFilter ?? ''}
-            onChange={(event) => setGlobalFilter(String(event.target.value))}
-            className="max-w-sm"
-          />
+          <h2 className="text-2xl font-bold tracking-tight">Members</h2>
+          <p className="text-muted-foreground"></p>
         </div>
       </div>
 
@@ -158,9 +209,16 @@ export default function UserDataTable({ users }: { users: User[] }) {
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                      <div className="block">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.column.getCanFilter() && (
+                          <div className="mt-1">
+                            {getFilterComponent(header)}
+                          </div>
+                        )}
+                      </div>
                     </TableHead>
                   );
                 })}

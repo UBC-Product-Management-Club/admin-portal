@@ -26,7 +26,7 @@ export default function AuthorizedLayout() {
         }
       >
         <AppSidebar variant="inset" />
-        <SidebarInset>
+        <SidebarInset className="flex-1 min-w-0 max-w-full">
           <SiteHeader />
           <Outlet />
         </SidebarInset>
