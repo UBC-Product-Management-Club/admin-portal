@@ -106,6 +106,7 @@ const columns: ColumnDef<User>[] = [
     cell: ({ row }) => (
       <code className="text-xs bg-muted px-1 py-0.5 rounded">{row.getValue('studentId')}</code>
     ),
+    filterFn: (row, _, filterValue) => String(row.getValue('studentId')).includes(filterValue),
   },
 ];
 
@@ -144,7 +145,7 @@ const filterConfigs: Record<
       { value: 'Other', label: 'Other' },
     ],
   },
-  is_payment_verified: {
+  isPaymentVerified: {
     type: 'select',
     options: [
       { value: 'true', label: 'Verified' },
