@@ -148,17 +148,37 @@ function DragHandle({ id }: { id: number }) {
 //     </TableRow>
 //   )
 // }
+const renderSelectFilter = <TData,>(
+  header: Header<TData, unknown>,
+  options: { value: string; label: string }[]
+) => (
+  <select
+    value={(header.column.getFilterValue() as string) ?? ''}
+    onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+    className="w-full h-6 rounded-md border border-input bg-background px-2 text-xs"
+  >
+    <option value="">Select a value</option>
+    {options.map(({ value, label }) => (
+      <option key={value} value={value}>
+        {label}
+      </option>
+    ))}
+  </select>
+);
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  filterComponentFn: (header: Header<TData, unknown>) => React.ReactNode;
+  filterConfig: Record<
+    string,
+    { type: 'select' | 'text'; options?: { value: string; label: string }[] }
+  >;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  filterComponentFn,
+  filterConfig,
 }: DataTableProps<TData, TValue>) {
   const [globalFilter, setGlobalFilter] = useState('');
   const table = useReactTable({
@@ -173,12 +193,27 @@ export function DataTable<TData, TValue>({
       globalFilter,
     },
   });
+  const getFilterComponent = (header: Header<TData, unknown>) => {
+    const config = filterConfig[header.column.id];
+    const component =
+      config?.type === 'select' && config.options ? (
+        renderSelectFilter<TData>(header, config.options)
+      ) : (
+        <Input
+          value={header.column.getFilterValue() as string}
+          onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
+          className="h-6"
+        />
+      );
+
+    return <div className="flex my-1 items-center">{component}</div>;
+  };
 
   return (
     <div className="flex-col justify-between">
       <div className="flex flex-row items-center">
         <Input
-          placeholder="Search users..."
+          placeholder="Search"
           value={globalFilter ?? ''}
           onChange={(event) => setGlobalFilter(String(event.target.value))}
           className="max-w-sm"
@@ -232,7 +267,7 @@ export function DataTable<TData, TValue>({
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
                       {header.column.getCanFilter() && (
-                        <div className="mt-1">{filterComponentFn(header)}</div>
+                        <div className="mt-1">{getFilterComponent(header)}</div>
                       )}
                     </TableHead>
                   );

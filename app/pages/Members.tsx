@@ -110,25 +110,7 @@ const columns: ColumnDef<User>[] = [
   },
 ];
 
-const renderSelectFilter = (
-  header: Header<User, unknown>,
-  options: { value: string; label: string }[]
-) => (
-  <select
-    value={(header.column.getFilterValue() as string) ?? ''}
-    onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
-    className="w-full h-6 rounded-md border border-input bg-background px-2 text-xs"
-  >
-    <option value="">Select a value</option>
-    {options.map(({ value, label }) => (
-      <option key={value} value={value}>
-        {label}
-      </option>
-    ))}
-  </select>
-);
-
-const filterConfigs: Record<
+const filterConfig: Record<
   string,
   { type: 'select' | 'text'; options?: { value: string; label: string }[] }
 > = {
@@ -164,22 +146,6 @@ const filterConfigs: Record<
   },
 };
 
-const getFilterComponent = (header: Header<User, unknown>) => {
-  const config = filterConfigs[header.column.id];
-  const component =
-    config?.type === 'select' && config.options ? (
-      renderSelectFilter(header, config.options)
-    ) : (
-      <Input
-        value={header.column.getFilterValue() as string}
-        onChange={(e) => header.column.setFilterValue(e.target.value || undefined)}
-        className="h-6"
-      />
-    );
-
-  return <div className="flex my-1 items-center">{component}</div>;
-};
-
 export default function Members({ loaderData, actionData, params, matches }: Route.ComponentProps) {
   const [userData, setUserData] = useState();
   const [error, setError] = useState('');
@@ -208,7 +174,7 @@ export default function Members({ loaderData, actionData, params, matches }: Rou
   return (
     <div className="p-6">
       <h1>Members</h1>
-      <DataTable columns={columns} data={userData} filterComponentFn={getFilterComponent} />
+      <DataTable columns={columns} data={userData} filterConfig={filterConfig} />
     </div>
   );
 }
