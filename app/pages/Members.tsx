@@ -5,7 +5,7 @@ import { DataTable } from '@/components/data-table';
 import type { ColumnDef, Header } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import type { User } from '@/lib/types';
+import type { User } from '@/lib/types/User';
 
 const columns: ColumnDef<User>[] = [
   {

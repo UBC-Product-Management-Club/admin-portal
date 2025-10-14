@@ -36,13 +36,13 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                     if (response.error) {
                       setError(response.error);
                     } else {
-                      console.log(response.data);
                       setUser(response.data.user);
                       setSession(response.data.session);
                       navigateTo('/dashboard');
                     }
-                  }).catch((e) => {
-                    console.error(e)
+                  })
+                  .catch((e) => {
+                    console.error(e);
                   })
                   .finally(() => setLoading(false));
               }

@@ -1,4 +1,4 @@
-import { UserSchema, UsersSchema, type User } from "@/lib/types";
+import { UserSchema, UsersSchema, type User } from "@/lib/types/User";
 import { UserService } from "@/services/UserService";
 import { useCallback, useMemo } from "react";
 
