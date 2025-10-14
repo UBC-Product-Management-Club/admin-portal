@@ -1,20 +1,22 @@
-import { UsersSchema } from "@/lib/types";
-import { useUserData } from "@/providers/UserDataProvider";
-import { AdminService } from "@/services/AdminService";
+import { UserSchema, UsersSchema, type User } from "@/lib/types";
+import { UserService } from "@/services/UserService";
 import { useCallback, useMemo } from "react";
 
 function useMember() {
-    const { session } = useUserData();
-    const adminService = useMemo(() => new AdminService, [])
+    const userService = useMemo(() => new UserService, [])
 
-    const getUsers = useCallback(async (): Promise<any> => {
-        if (!session?.access_token) throw new Error("No session");
-        const data = await adminService.getUsers(session?.access_token);
+    const getUsers = useCallback(async (): Promise<User[]> => {
+        const data = await userService.getUsers();
         return UsersSchema.parse(data)
-    }, [adminService])
+    }, [userService])
+
+    const getUser = useCallback(async (user_id: string): Promise<User> => {
+        const user = await userService.getUser(user_id);
+        return UserSchema.parse(user)
+    }, [userService])
 
 
-    return { getUsers } 
+    return { getUsers, getUser }
 }
 
 export { useMember }

@@ -1,8 +1,26 @@
+import { supabase } from "@/config/supabase";
 export class RestClient {
-    public constructor(private readonly baseUrl: string) {}
+
+    // Admin portal should only access admin routes
+    private readonly baseUrl: string = `${import.meta.env.VITE_API_URL}/api/v2/admin`
+
+    static #instance: RestClient
+
+    private constructor() {}
+
+    public static getRestClient(): RestClient {
+        if (!RestClient.#instance) {
+            RestClient.#instance = new RestClient();
+        }
+        return RestClient.#instance;
+    }
 
     public async request<TResponse>(path: string, options: RequestInit = {}): Promise<TResponse> {
-        const headers = options.headers;
+        const access_token = (await supabase.auth.getSession()).data.session?.access_token
+        if (!access_token) {
+            throw new Error("No access token found!")
+        }
+        const headers = {...options.headers, "Authorization": `Bearer ${access_token}`};
         const response = await fetch(`${this.baseUrl}${path}`, { ...options, headers });
 
         if (!response.ok) {
