@@ -34,14 +34,14 @@ const UserSchema = RawUser.transform((user) => ({
     displayName: user.display_name,
     whyPm: user.why_pm,
     pronouns: user.pronouns,
-    university: user.university ?? undefined,
-    faculty: user.faculty ?? undefined,
+    university: user.university,
+    faculty: user.faculty,
     email: user.email,
-    year: user.year ?? undefined,
-    major: user.major ?? undefined,
+    year: user.year,
+    major: user.major,
     pfp: user.pfp,
     isPaymentVerified: user.is_payment_verified,
-    studentId: user.student_id ?? undefined,
+    studentId: user.student_id,
 }));
 
 const UsersSchema = z.array(UserSchema)
