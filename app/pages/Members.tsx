@@ -6,6 +6,25 @@ import type { ColumnDef, Header } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import type { User } from '@/lib/types/User';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreHorizontal } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { UserInfoDialog } from '@/components/UserInfoDialog';
 
 const columns: ColumnDef<User>[] = [
   {
@@ -108,6 +127,42 @@ const columns: ColumnDef<User>[] = [
     ),
     filterFn: (row, _, filterValue) => String(row.getValue('studentId')).includes(filterValue),
   },
+  {
+    id: 'actions',
+    size: 50,
+    cell: ({ row }) => {
+      const user = row.original;
+      return (
+        <Dialog>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DialogTrigger>
+                <DropdownMenuItem>View member</DropdownMenuItem>
+              </DialogTrigger>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>View payments</DropdownMenuItem>
+              <DropdownMenuItem>View registered events</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DialogContent>
+            <DialogHeader>
+                <UserInfoDialog user={user}/>
+            </DialogHeader>
+            {/* <DialogFooter>
+              <Button type="submit">Confirm</Button>
+            </DialogFooter> */}
+          </DialogContent>
+        </Dialog>
+      );
+    },
+  },
 ];
 
 const filterConfig: Record<
@@ -147,14 +202,13 @@ const filterConfig: Record<
 };
 
 export default function Members({ loaderData, actionData, params, matches }: Route.ComponentProps) {
-  const [userData, setUserData] = useState();
+  const [userData, setUserData] = useState<User[]>();
   const [error, setError] = useState('');
   const { getUsers } = useMember();
 
   useEffect(() => {
     getUsers()
       .then((res) => {
-        console.log('getUsers() result:', res);
         setUserData(res);
       })
       .catch((e) => {
