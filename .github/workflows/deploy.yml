@@ -2,7 +2,9 @@ name: Build and Deploy to Cloud Run
 
 on:
   workflow_dispatch:
-
+  push:
+    branches:
+      - workflow
 env:
   PROJECT_ID: ${{ secrets.PROJECT_ID }}
   APP_NAME: ${{ secrets.APP_NAME }}
