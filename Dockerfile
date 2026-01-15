@@ -1,41 +1,24 @@
-# STILL DOESNT WORK
-
-# Stage 1: Install development dependencies
-FROM node:20-alpine AS development-dependencies-env
+# Stage 1: Build
+FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 COPY . .
-
-# Stage 2: Install production dependencies
-FROM node:20-alpine AS production-dependencies-env
-WORKDIR /app
-COPY package*.json package-lock.json ./
-RUN npm ci --omit=dev
-
-# Stage 3: Build the Vite SPA
-FROM node:20-alpine AS build-env
-WORKDIR /app
-COPY . .
-COPY --from=development-dependencies-env /app/node_modules /app/node_modules
 RUN npm run build
 
-# Stage 4: Final production image
-FROM node:20-alpine
+# Stage 2: Serve
+FROM node:20-alpine AS execute
 WORKDIR /app
 
-# Copy production dependencies
-COPY package*.json ./
-COPY --from=production-dependencies-env /app/node_modules /app/node_modules
-
-# Copy built SPA
-COPY --from=build-env /app/build /app/build
-
-# Install global static server
+# 1. Install 'serve' to host the static files
 RUN npm install -g serve
 
-# Expose port Cloud Run expects
-EXPOSE 8080
+# 2. Copy the contents of build/client into /app
+# This includes your newly generated index.html
+COPY --from=build /app/build/client .
 
-# Start SPA server on all interfaces at port 8080
-CMD ["npm", "run", "start"]
+EXPOSE 3000
+
+# 4. Run 'serve' in Single Page App mode
+# -s ensures that if you refresh the page on a sub-route, it loads index.html
+CMD ["serve", "-s", ".", "-l", "3000"]
