@@ -3,6 +3,7 @@ import type { Route } from '../+types/root';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEffect, useState } from 'react';
 import { useEvents } from '@/hooks/useEvents';
+import EventPage from "../components/event-page"
 
 export default function Events({ loaderData, actionData, params, matches }: Route.ComponentProps) {
   const [tabs, setTabs] = useState<BasicEvents | undefined>();
@@ -34,7 +35,7 @@ export default function Events({ loaderData, actionData, params, matches }: Rout
         </TabsList>
         {tabs.map((tab) => (
           <TabsContent key={tab.event_id} value={tab.event_id}>
-            {tab.name}
+            <EventPage event_id={tab.event_id} />
           </TabsContent>
         ))}
       </Tabs>
