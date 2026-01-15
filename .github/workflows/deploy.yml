@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - workflow
+      - main
 env:
   PROJECT_ID: ${{ secrets.PROJECT_ID }}
   APP_NAME: ${{ secrets.APP_NAME }}
