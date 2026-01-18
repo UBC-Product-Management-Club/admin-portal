@@ -10,10 +10,10 @@ export function useEvents() {
         return BasicEventsSchema.parse(data)
     }, [eventService])
 
-    const getEvent = useCallback(async () => {
-        const data = await eventService.getBasicEventInfo()
+    const getEvent = useCallback(async (event_id: string) => {
+        const data = await eventService.getEvent(event_id)
         return EventSchema.parse(data)
     }, [eventService])
 
     return { getBasicEventInfo, getEvent } 
-}
+} 
