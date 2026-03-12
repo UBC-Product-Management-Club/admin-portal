@@ -17,8 +17,8 @@ const RawUser = z.object({
     display_name: z.string(),
     why_pm: z.string(),
     pronouns: z.string(),
-    email: z.email(),
-    pfp: z.url(),
+    email: z.string().email(),
+    pfp: z.string().url(),
     is_payment_verified: z.boolean(),
     university: z.enum(Universities).nullable(),
     faculty: z.string().nullable(),
@@ -46,7 +46,7 @@ const UserSchema = RawUser.transform((user) => ({
 
 const UsersSchema = z.array(UserSchema)
 
-export interface User extends z.infer<typeof UserSchema> {}
+export interface User extends z.infer<typeof UserSchema> { }
 
 export {
     Universities,

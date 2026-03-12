@@ -1,13 +1,110 @@
 import { useEvents } from "../hooks/useEvents"
 import type { Event } from "../lib/types/Event";
+import type { User } from "@/lib/types/User";
 import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { DataTable } from "@/components/data-table"
+import type { ColumnDef } from "@tanstack/react-table"
+import { ChevronDown } from "lucide-react"
 
-export default function EventPage({ event_id } : { event_id: string }) {
-    const { getEvent } = useEvents();
+const attendeeColumns: ColumnDef<User>[] = [
+    {
+        accessorKey: "displayName",
+        header: "Name",
+        enableColumnFilter: true,
+        size: 150,
+        cell: ({ row }) => (
+            <div className="text-sm text-muted-foreground">
+                {row.original.firstName} {row.original.lastName}
+            </div>
+        ),
+        filterFn: (row, _, filterValue) => {
+            const value = row.original.firstName + " " + row.original.lastName;
+            return String(value.toLowerCase()).includes(filterValue.toLowerCase());
+        },
+    },
+    {
+        accessorKey: "email",
+        header: "Email",
+        size: 250,
+        enableColumnFilter: true,
+        cell: ({ row }) => <div className="text-sm">{row.getValue("email")}</div>,
+    },
+    {
+        accessorKey: "pronouns",
+        header: "Pronouns",
+        enableColumnFilter: false,
+        size: 80,
+        cell: ({ row }) => (
+            <Badge variant="outline" className="text-xs">
+                {row.getValue("pronouns")}
+            </Badge>
+        ),
+    },
+    {
+        accessorKey: "university",
+        header: "University",
+        enableColumnFilter: true,
+        size: 250,
+        cell: ({ row }) => <div className="text-sm">{row.getValue("university")}</div>,
+    },
+    {
+        accessorKey: "year",
+        header: "Year",
+        enableColumnFilter: false,
+        size: 50,
+        cell: ({ row }) => (
+            <Badge variant="secondary" className="text-xs">
+                {row.getValue("year")}
+            </Badge>
+        ),
+    },
+    {
+        accessorKey: "isPaymentVerified",
+        header: "Payment",
+        enableColumnFilter: false,
+        size: 100,
+        cell: ({ row }) => (
+            <Badge
+                variant={row.getValue("isPaymentVerified") ? "default" : "destructive"}
+                className="text-xs"
+            >
+                {row.getValue("isPaymentVerified") ? "Verified" : "Pending"}
+            </Badge>
+        ),
+    },
+];
+
+const attendeeFilterConfig: Record<
+    string,
+    { type: "select" | "text"; options?: { value: string; label: string }[] }
+> = {
+    university: {
+        type: "select",
+        options: [
+            { value: "University of British Columbia", label: "University of British Columbia" },
+            { value: "Simon Fraser University", label: "Simon Fraser University" },
+            { value: "British Columbia Institute of Technology", label: "British Columbia Institute of Technology" },
+            { value: "Other", label: "Other" },
+            { value: "I'm not a university student", label: "I'm not a university student" },
+        ],
+    },
+};
+
+export default function EventPage({ event_id }: { event_id: string }) {
+    const { getEvent, getEventAttendees } = useEvents();
     const [event, setEvent] = useState<Event | undefined>();
+    const [attendees, setAttendees] = useState<User[]>([]);
 
     useEffect(() => {
         getEvent(event_id).then((result) => setEvent(result)).catch((err) => console.error(err))
+        getEventAttendees(event_id).then((result) => setAttendees(result)).catch((err) => console.error(err))
     }, [event_id])
 
     if (!event) {
@@ -15,18 +112,102 @@ export default function EventPage({ event_id } : { event_id: string }) {
     }
 
     return (
-        <div>
-            <h1>{event_id}</h1>
-            <h1>{event.name}</h1>
-            <p>{event.description}</p>
-            <p>{event.location}</p>
-            <p>{event.date}</p>
-            <p>{event.startTime}</p>
-            <p>{event.endTime}</p>
-            <p>{event.memberPrice}</p>
-            <p>{event.nonMemberPrice}</p>
-            <p>{event.maxAttendees}</p>
-            <p>{event.registered}</p>
+        <div className="flex flex-col gap-6 py-4">
+            {/* Event Info Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-2xl">{event.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-5">
+                    {/* Event Name */}
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="event-name">Event Name</Label>
+                        <Input id="event-name" value={event.name} readOnly />
+                    </div>
+
+                    {/* Blurb */}
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="event-blurb">Blurb</Label>
+                        <Textarea id="event-blurb" value={event.blurb} readOnly />
+                    </div>
+
+                    {/* Description */}
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="event-description">Description</Label>
+                        <Textarea id="event-description" value={event.description} readOnly className="min-h-24" />
+                    </div>
+
+                    {/* Location & Date */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="event-location">Location</Label>
+                            <Input id="event-location" value={event.location} readOnly />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="event-date">Date</Label>
+                            <Input id="event-date" value={event.date} readOnly />
+                        </div>
+                    </div>
+
+                    {/* Start Time & End Time */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="event-start-time">Start Time</Label>
+                            <Input id="event-start-time" value={event.startTime} readOnly />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="event-end-time">End Time</Label>
+                            <Input id="event-end-time" value={event.endTime} readOnly />
+                        </div>
+                    </div>
+
+                    {/* Member Price & Non-Member Price */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="event-member-price">Member Price</Label>
+                            <Input id="event-member-price" value={`$${event.memberPrice.toFixed(2)}`} readOnly />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="event-non-member-price">Non-Member Price</Label>
+                            <Input id="event-non-member-price" value={`$${event.nonMemberPrice.toFixed(2)}`} readOnly />
+                        </div>
+                    </div>
+
+                    {/* Max Attendees & Capacity */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="event-max-attendees">Max Attendees</Label>
+                            <Input id="event-max-attendees" value={String(event.maxAttendees)} readOnly />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Label>Capacity</Label>
+                            <Badge
+                                variant={event.registered >= event.maxAttendees ? "destructive" : "secondary"}
+                                className="w-fit text-sm px-3 py-1"
+                            >
+                                {event.registered} / {event.maxAttendees} Registered
+                            </Badge>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Attendees Collapsible Section */}
+            <Collapsible>
+                <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between cursor-pointer">
+                        <span>View Attendees ({event.registered})</span>
+                        <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
+                    </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-4">
+                    <DataTable
+                        columns={attendeeColumns}
+                        data={attendees}
+                        filterConfig={attendeeFilterConfig}
+                    />
+                </CollapsibleContent>
+            </Collapsible>
         </div>
     )
 }

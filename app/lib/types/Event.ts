@@ -11,8 +11,8 @@ const RawEventSchema = z.object({
     location: z.string(),
     blurb: z.string(),
     description: z.string(),
-    media: z.array(z.url()),
-    thumbnail: z.url(),
+    media: z.array(z.url()).nullable().optional(),
+    thumbnail: z.url().nullable().optional(),
     member_price: z.number(),
     non_member_price: z.number(),
     max_attendees: z.number(),
@@ -24,7 +24,7 @@ const RawEventSchema = z.object({
     waitlist_form: z.url().nullable().optional(),
 });
 
-const BasicEventSchema = RawEventSchema.pick({event_id: true, name: true})
+const BasicEventSchema = RawEventSchema.pick({ event_id: true, name: true })
 
 const BasicEventsSchema = z.array(BasicEventSchema)
 
@@ -54,9 +54,9 @@ const EventSchema = RawEventSchema.transform((event) => ({
 
 const EventsSchema = z.array(EventSchema)
 
-export interface Event extends z.infer<typeof EventSchema> {}
-export interface Events extends z.infer<typeof EventsSchema> {}
-export interface BasicEvent extends z.infer<typeof BasicEventSchema> {}
-export interface BasicEvents extends z.infer<typeof BasicEventsSchema> {}
+export interface Event extends z.infer<typeof EventSchema> { }
+export interface Events extends z.infer<typeof EventsSchema> { }
+export interface BasicEvent extends z.infer<typeof BasicEventSchema> { }
+export interface BasicEvents extends z.infer<typeof BasicEventsSchema> { }
 
 export { EventSchema, EventsSchema, BasicEventSchema, BasicEventsSchema }

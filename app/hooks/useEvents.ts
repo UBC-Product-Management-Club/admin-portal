@@ -1,4 +1,5 @@
 import { BasicEventsSchema, EventSchema } from "@/lib/types/Event";
+import { UsersSchema } from "@/lib/types/User";
 import { EventService } from "@/services/EventService";
 import { useCallback, useMemo } from "react";
 
@@ -15,5 +16,11 @@ export function useEvents() {
         return EventSchema.parse(data)
     }, [eventService])
 
-    return { getBasicEventInfo, getEvent } 
+    const getEventAttendees = useCallback(async (event_id: string) => {
+        const data = await eventService.getEventAttendees(event_id)
+        const users = (data as any[]).map(item => item.User).filter(Boolean)
+        return UsersSchema.parse(users)
+    }, [eventService])
+
+    return { getBasicEventInfo, getEvent, getEventAttendees }
 } 
