@@ -97,6 +97,34 @@ const attendeeFilterConfig: Record<
     },
 };
 
+const formatDate = (dateStr: string) => {
+    try {
+        const date = new Date(dateStr);
+        return new Intl.DateTimeFormat("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            timeZone: "UTC",
+        }).format(date);
+    } catch (e) {
+        return dateStr;
+    }
+};
+
+const formatTime = (dateStr: string) => {
+    try {
+        const date = new Date(dateStr);
+        return new Intl.DateTimeFormat("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone: "UTC",
+        }).format(date);
+    } catch (e) {
+        return dateStr;
+    }
+};
+
 export default function EventPage({ event_id }: { event_id: string }) {
     const { getEvent, getEventAttendees } = useEvents();
     const [event, setEvent] = useState<Event | undefined>();
@@ -137,15 +165,21 @@ export default function EventPage({ event_id }: { event_id: string }) {
                         <Textarea id="event-description" value={event.description} readOnly className="min-h-24" />
                     </div>
 
-                    {/* Location & Date */}
+                    {/* Location */}
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="event-location">Location</Label>
+                        <Input id="event-location" value={event.location} readOnly />
+                    </div>
+
+                    {/* Start Date & End Date */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-location">Location</Label>
-                            <Input id="event-location" value={event.location} readOnly />
+                            <Label htmlFor="event-start-date">Start Date</Label>
+                            <Input id="event-start-date" value={formatDate(event.startTime)} readOnly />
                         </div>
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-date">Date</Label>
-                            <Input id="event-date" value={event.date} readOnly />
+                            <Label htmlFor="event-end-date">End Date</Label>
+                            <Input id="event-end-date" value={formatDate(event.endTime)} readOnly />
                         </div>
                     </div>
 
@@ -153,11 +187,13 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="event-start-time">Start Time</Label>
-                            <Input id="event-start-time" value={event.startTime} readOnly />
+                            <Input id="event-start-time" value={formatTime(event.startTime)} readOnly />
+                            <p className="text-[10px] text-muted-foreground font-mono">Raw: {event.startTime}</p>
                         </div>
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="event-end-time">End Time</Label>
-                            <Input id="event-end-time" value={event.endTime} readOnly />
+                            <Input id="event-end-time" value={formatTime(event.endTime)} readOnly />
+                            <p className="text-[10px] text-muted-foreground font-mono">Raw: {event.endTime}</p>
                         </div>
                     </div>
 
