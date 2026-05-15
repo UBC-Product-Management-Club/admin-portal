@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEffect, useState } from 'react';
 import { useEvents } from '@/hooks/useEvents';
 import EventPage from "../components/event-page"
+import { Spinner } from '@/components/ui/spinner';
 
 export default function Events({ loaderData, actionData, params, matches }: Route.ComponentProps) {
   const [tabs, setTabs] = useState<BasicEvents | undefined>();
@@ -20,7 +21,7 @@ export default function Events({ loaderData, actionData, params, matches }: Rout
   }, [tabs]);
 
   if (!tabs) {
-    return <h1>loading...</h1>;
+    return <div className="flex h-full items-center justify-center"><Spinner className="size-8 text-muted-foreground" /></div>;
   }
 
   return (
