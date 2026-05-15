@@ -3,8 +3,8 @@ import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { Spinner } from '@/components/ui/spinner';
 import { useUserData } from '@/providers/UserDataProvider';
-import { Loader2Icon } from 'lucide-react';
 import { Link, Outlet } from 'react-router';
 
 export default function AuthorizedLayout() {
@@ -13,7 +13,7 @@ export default function AuthorizedLayout() {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <Loader2Icon className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Spinner className="size-8 text-muted-foreground" />
       </div>
     );
   }

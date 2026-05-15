@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useNavigate } from 'react-router';
 import { useUserData } from '@/providers/UserDataProvider';
-import { Loader2Icon } from 'lucide-react';
+import { Spinner } from './ui/spinner';
 
 export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) {
   const [error, setError] = useState<string | undefined>(undefined);
@@ -56,7 +56,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               </div>
               <div className="flex flex-col gap-3">
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading && <Loader2Icon className="animate-spin" />}
+                  {loading && <Spinner />}
                   Login
                 </Button>
               </div>
