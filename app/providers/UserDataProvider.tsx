@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 
-interface AuthContextType {
+interface UserDataContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
@@ -19,10 +19,10 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
 
-function useUserData(): AuthContextType {
-  const ctx = useContext(AuthContext);
+function useUserData(): UserDataContextType {
+  const ctx = useContext(UserDataContext);
   if (!ctx) {
     throw new Error('useUserData must be used within a UserDataProvider');
   }
@@ -50,7 +50,7 @@ function UserDataProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((_, session) => {
       setSession(session);
       setUser(session?.user ?? null);
     });
@@ -67,7 +67,7 @@ function UserDataProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   }, []);
 
-  const auth = useMemo<AuthContextType>(
+  const auth = useMemo<UserDataContextType>(
     () => ({
       user,
       session,
@@ -79,7 +79,7 @@ function UserDataProvider({ children }: { children: ReactNode }) {
     [user, session, isLoading, login, logout],
   );
 
-  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
+  return <UserDataContext.Provider value={auth}>{children}</UserDataContext.Provider>;
 }
 
 export { UserDataProvider, useUserData };
