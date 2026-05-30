@@ -1,88 +1,113 @@
-import { supabase } from "@/config/supabase";
+import { supabase } from '@/config/supabase';
 export class RestClient {
+  // Admin portal should only access admin routes
+  private readonly baseUrl: string = `${import.meta.env.VITE_API_URL}/api/v2/admin`;
 
-    // Admin portal should only access admin routes
-    private readonly baseUrl: string = `${import.meta.env.VITE_API_URL}/api/v2/admin`
+  static #instance: RestClient;
 
-    static #instance: RestClient
+  private constructor() {}
 
-    private constructor() {}
+  public static getRestClient(): RestClient {
+    if (!RestClient.#instance) {
+      RestClient.#instance = new RestClient();
+    }
+    return RestClient.#instance;
+  }
 
-    public static getRestClient(): RestClient {
-        if (!RestClient.#instance) {
-            RestClient.#instance = new RestClient();
-        }
-        return RestClient.#instance;
+  public async request<TResponse>(path: string, options: RequestInit = {}): Promise<TResponse> {
+    const access_token = (await supabase.auth.getSession()).data.session?.access_token;
+    if (!access_token) {
+      throw new Error('No access token found!');
+    }
+    const headers = { ...options.headers, Authorization: `Bearer ${access_token}` };
+    const response = await fetch(`${this.baseUrl}${path}`, { ...options, headers });
+
+    if (!response.ok) {
+      // Optionally log or throw a custom error
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }
 
-    public async request<TResponse>(path: string, options: RequestInit = {}): Promise<TResponse> {
-        const access_token = (await supabase.auth.getSession()).data.session?.access_token
-        if (!access_token) {
-            throw new Error("No access token found!")
-        }
-        const headers = {...options.headers, "Authorization": `Bearer ${access_token}`};
-        const response = await fetch(`${this.baseUrl}${path}`, { ...options, headers });
-
-        if (!response.ok) {
-            // Optionally log or throw a custom error
-            throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-        }
-
-        const contentType = response.headers.get('Content-Type') || '';
-        if (contentType.includes('application/json')) {
-            return response.json() as Promise<TResponse>;
-        }
-
-        // Add handling for other types if needed
-        return null as unknown as TResponse;
+    const contentType = response.headers.get('Content-Type') || '';
+    if (contentType.includes('application/json')) {
+      return response.json() as Promise<TResponse>;
     }
 
-    public get<TResponse>(path: string, headers: HeadersInit = {}): Promise<TResponse> {
-        return this.request<TResponse>(path, {
-            method: 'GET',
-            credentials: 'include',
-            headers,
-        });
+    // Add handling for other types if needed
+    return null as unknown as TResponse;
+  }
+
+  public get<TResponse>(path: string, headers: HeadersInit = {}): Promise<TResponse> {
+    return this.request<TResponse>(path, {
+      method: 'GET',
+      credentials: 'include',
+      headers,
+    });
+  }
+
+  public post<TResponse>(
+    path: string,
+    body: BodyInit,
+    headers: HeadersInit = {}
+  ): Promise<TResponse> {
+    return this.request<TResponse>(path, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body,
+    });
+  }
+
+  public put<TRequest, TResponse>(
+    path: string,
+    body: TRequest,
+    headers: HeadersInit = {}
+  ): Promise<TResponse> {
+    return this.request<TResponse>(path, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  public delete<TResponse>(path: string, headers: HeadersInit = {}): Promise<TResponse> {
+    return this.request<TResponse>(path, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers,
+    });
+  }
+
+  public async downloadBlob(path: string, filename: string): Promise<void> {
+    const access_token = (await supabase.auth.getSession()).data.session?.access_token;
+    if (!access_token) {
+      throw new Error('No access token found!');
     }
 
-    public post<TResponse>(
-        path: string,
-        body: BodyInit,
-        headers: HeadersInit = {}
-    ): Promise<TResponse> {
-        return this.request<TResponse>(path, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json',
-                ...headers,
-            },
-            body,
-        });
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }
 
-    public put<TRequest, TResponse>(
-        path: string,
-        body: TRequest,
-        headers: HeadersInit = {}
-    ): Promise<TResponse> {
-        return this.request<TResponse>(path, {
-            method: 'PUT',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json',
-                ...headers,
-            },
-            body: JSON.stringify(body),
-        });
-    }
-
-    public delete<TResponse>(path: string, headers: HeadersInit = {}): Promise<TResponse> {
-        return this.request<TResponse>(path, {
-            method: 'DELETE',
-            credentials: 'include',
-            headers,
-        });
-    }
-
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+  }
 }
