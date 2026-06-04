@@ -1,5 +1,6 @@
 import { useEvents } from "../hooks/useEvents"
 import type { Event } from "../lib/types/Event";
+import { Universities } from "@/lib/types/User";
 import type { User } from "@/lib/types/User";
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -87,13 +88,7 @@ const attendeeFilterConfig: Record<
 > = {
     university: {
         type: "select",
-        options: [
-            { value: "University of British Columbia", label: "University of British Columbia" },
-            { value: "Simon Fraser University", label: "Simon Fraser University" },
-            { value: "British Columbia Institute of Technology", label: "British Columbia Institute of Technology" },
-            { value: "Other", label: "Other" },
-            { value: "I'm not a university student", label: "I'm not a university student" },
-        ],
+        options: Universities.map((uni) => ({ value: uni, label: uni })),
     },
 };
 
