@@ -1,5 +1,4 @@
 import type { BasicEvent, Event } from "@/lib/types/Event";
-import type { User } from "@/lib/types/User";
 import { BaseService } from "./BaseService";
 
 class EventService extends BaseService {
@@ -13,7 +12,7 @@ class EventService extends BaseService {
         return this.client.get(`${this.path}/${event_id}`, this.headers)
     }
 
-    getEventAttendees(event_id: string): Promise<User[]> {
+    getEventAttendees(event_id: string): Promise<unknown> {
         return this.client.get(`${this.path}/${event_id}/attendees`, this.headers)
     }
 

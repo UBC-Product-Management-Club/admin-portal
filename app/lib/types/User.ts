@@ -46,6 +46,12 @@ const UserSchema = RawUser.transform((user) => ({
 
 const UsersSchema = z.array(UserSchema)
 
+const EventAttendeeResponseSchema = z.object({
+    User: UserSchema,
+}).transform((item) => item.User);
+
+const EventAttendeesResponseSchema = z.array(EventAttendeeResponseSchema);
+
 export interface User extends z.infer<typeof UserSchema> { }
 
 export {
@@ -53,4 +59,5 @@ export {
     years,
     UserSchema,
     UsersSchema,
+    EventAttendeesResponseSchema,
 };
