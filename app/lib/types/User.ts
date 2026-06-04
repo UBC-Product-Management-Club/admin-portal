@@ -46,13 +46,24 @@ const UserSchema = RawUser.transform((user) => ({
 
 const UsersSchema = z.array(UserSchema)
 
-const EventAttendeeResponseSchema = z.object({
-    User: UserSchema,
-}).transform((item) => item.User);
+const RawEventAttendee = z.object({
+    user_id: z.string(),
+    first_name: z.string(),
+    last_name: z.string(),
+    email: z.string().email(),
+});
 
-const EventAttendeesResponseSchema = z.array(EventAttendeeResponseSchema);
+const EventAttendeeSchema = RawEventAttendee.transform((attendee) => ({
+    userId: attendee.user_id,
+    firstName: attendee.first_name,
+    lastName: attendee.last_name,
+    email: attendee.email,
+}));
+
+const EventAttendeesResponseSchema = z.array(EventAttendeeSchema);
 
 export interface User extends z.infer<typeof UserSchema> { }
+export interface EventAttendee extends z.infer<typeof EventAttendeeSchema> { }
 
 export {
     Universities,

@@ -1,7 +1,6 @@
 import { useEvents } from "../hooks/useEvents"
 import type { Event } from "../lib/types/Event";
-import { Universities } from "@/lib/types/User";
-import type { User } from "@/lib/types/User";
+import type { EventAttendee } from "@/lib/types/User";
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -14,9 +13,9 @@ import { DataTable } from "@/components/data-table"
 import type { ColumnDef } from "@tanstack/react-table"
 import { ChevronDown } from "lucide-react"
 
-const attendeeColumns: ColumnDef<User>[] = [
+const attendeeColumns: ColumnDef<EventAttendee>[] = [
     {
-        accessorKey: "displayName",
+        accessorKey: "firstName",
         header: "Name",
         enableColumnFilter: true,
         size: 150,
@@ -37,58 +36,17 @@ const attendeeColumns: ColumnDef<User>[] = [
         enableColumnFilter: true,
         cell: ({ row }) => <div className="text-sm">{row.getValue("email")}</div>,
     },
-    {
-        accessorKey: "pronouns",
-        header: "Pronouns",
-        enableColumnFilter: false,
-        size: 80,
-        cell: ({ row }) => (
-            <Badge variant="outline" className="text-xs">
-                {row.getValue("pronouns")}
-            </Badge>
-        ),
-    },
-    {
-        accessorKey: "university",
-        header: "University",
-        enableColumnFilter: true,
-        size: 250,
-        cell: ({ row }) => <div className="text-sm">{row.getValue("university")}</div>,
-    },
-    {
-        accessorKey: "year",
-        header: "Year",
-        enableColumnFilter: false,
-        size: 50,
-        cell: ({ row }) => (
-            <Badge variant="secondary" className="text-xs">
-                {row.getValue("year")}
-            </Badge>
-        ),
-    },
-    {
-        accessorKey: "isPaymentVerified",
-        header: "Payment",
-        enableColumnFilter: false,
-        size: 100,
-        cell: ({ row }) => (
-            <Badge
-                variant={row.getValue("isPaymentVerified") ? "default" : "destructive"}
-                className="text-xs"
-            >
-                {row.getValue("isPaymentVerified") ? "Verified" : "Pending"}
-            </Badge>
-        ),
-    },
 ];
 
 const attendeeFilterConfig: Record<
     string,
     { type: "select" | "text"; options?: { value: string; label: string }[] }
 > = {
-    university: {
-        type: "select",
-        options: Universities.map((uni) => ({ value: uni, label: uni })),
+    firstName: {
+        type: "text",
+    },
+    email: {
+        type: "text",
     },
 };
 
@@ -123,7 +81,7 @@ const formatTime = (dateStr: string) => {
 export default function EventPage({ event_id }: { event_id: string }) {
     const { getEvent, getEventAttendees } = useEvents();
     const [event, setEvent] = useState<Event | undefined>();
-    const [attendees, setAttendees] = useState<User[]>([]);
+    const [attendees, setAttendees] = useState<EventAttendee[]>([]);
 
     useEffect(() => {
         getEvent(event_id).then((result) => setEvent(result)).catch((err) => console.error(err))
