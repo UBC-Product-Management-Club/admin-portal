@@ -96,7 +96,7 @@ export default function EventPage({ event_id }: { event_id: string }) {
         ])
             .catch((err) => setError(err instanceof Error ? err.message : "Failed to load event data"))
             .finally(() => setLoading(false));
-    }, [event_id])
+    }, [event_id, getEvent, getEventAttendees])
 
     if (loading) {
         return <p className="text-muted-foreground py-8 text-center">Loading event...</p>
