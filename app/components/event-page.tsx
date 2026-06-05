@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { DataTable } from "@/components/data-table"
 import type { ColumnDef } from "@tanstack/react-table"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, AlertCircle } from "lucide-react"
 
 const attendeeColumns: ColumnDef<EventAttendee>[] = [
     {
@@ -82,14 +83,43 @@ export default function EventPage({ event_id }: { event_id: string }) {
     const { getEvent, getEventAttendees } = useEvents();
     const [event, setEvent] = useState<Event | undefined>();
     const [attendees, setAttendees] = useState<EventAttendee[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        getEvent(event_id).then((result) => setEvent(result)).catch((err) => console.error(err))
-        getEventAttendees(event_id).then((result) => setAttendees(result)).catch((err) => console.error(err))
+        setLoading(true);
+        setError(null);
+
+        Promise.all([
+            getEvent(event_id).then((result) => setEvent(result)),
+            getEventAttendees(event_id).then((result) => setAttendees(result)),
+        ])
+            .catch((err) => setError(err instanceof Error ? err.message : "Failed to load event data"))
+            .finally(() => setLoading(false));
     }, [event_id])
 
+    if (loading) {
+        return <p className="text-muted-foreground py-8 text-center">Loading event...</p>
+    }
+
+    if (error) {
+        return (
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        )
+    }
+
     if (!event) {
-        return <h1>Loading...</h1>
+        return (
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Not Found</AlertTitle>
+                <AlertDescription>Event not found.</AlertDescription>
+            </Alert>
+        )
     }
 
     return (
