@@ -1,6 +1,7 @@
 import { useEvents } from "../hooks/useEvents"
 import type { Event } from "../lib/types/Event";
 import type { EventAttendee } from "@/lib/types/User";
+import { formatDate, formatTime } from "@/lib/utils";
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -51,33 +52,7 @@ const attendeeFilterConfig: Record<
     },
 };
 
-const formatDate = (dateStr: string) => {
-    try {
-        const date = new Date(dateStr);
-        return new Intl.DateTimeFormat("en-US", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-            timeZone: "UTC",
-        }).format(date);
-    } catch (e) {
-        return dateStr;
-    }
-};
 
-const formatTime = (dateStr: string) => {
-    try {
-        const date = new Date(dateStr);
-        return new Intl.DateTimeFormat("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            timeZone: "UTC",
-        }).format(date);
-    } catch (e) {
-        return dateStr;
-    }
-};
 
 export default function EventPage({ event_id }: { event_id: string }) {
     const { getEvent, getEventAttendees } = useEvents();
