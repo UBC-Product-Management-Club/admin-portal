@@ -6,6 +6,7 @@ import type { ColumnDef, Header } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import type { User } from '@/lib/types/User';
+import { Spinner } from '@/components/ui/spinner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -222,7 +223,7 @@ export default function Members({ loaderData, actionData, params, matches }: Rou
   }
 
   if (!userData) {
-    return <h1>loading...</h1>;
+    return <div className="flex h-full items-center justify-center"><Spinner className="size-8 text-muted-foreground" /></div>;
   }
 
   return (

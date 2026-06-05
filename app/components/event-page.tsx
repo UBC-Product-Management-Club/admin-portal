@@ -1,6 +1,7 @@
 import { useEvents } from "../hooks/useEvents"
 import type { Event } from "../lib/types/Event";
 import { useState, useEffect } from "react"
+import { Spinner } from "./ui/spinner"
 
 export default function EventPage({ event_id } : { event_id: string }) {
     const { getEvent } = useEvents();
@@ -11,7 +12,7 @@ export default function EventPage({ event_id } : { event_id: string }) {
     }, [event_id])
 
     if (!event) {
-        return <h1>Loading...</h1>
+        return <div className="flex h-full items-center justify-center"><Spinner className="size-8 text-muted-foreground" /></div>
     }
 
     return (

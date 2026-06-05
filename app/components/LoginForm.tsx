@@ -3,19 +3,39 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { login } from '@/services/AuthService';
 import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import type { AuthError } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router';
 import { useUserData } from '@/providers/UserDataProvider';
-import { Loader2Icon } from 'lucide-react';
+import { Spinner } from './ui/spinner';
 
 export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) {
-  const [error, setError] = useState<AuthError | undefined>(undefined);
-  const [loading, setLoading] = useState<boolean>(false);
-  const { setUser, setSession } = useUserData();
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
+  const { login } = useUserData();
   const navigateTo = useNavigate();
+
+  const handleSubmit = async (formData: FormData) => {
+    const email = formData.get('email')?.toString();
+    const password = formData.get('password')?.toString();
+    if (!email || !password) return;
+
+    setLoading(true);
+    setError(undefined);
+    try {
+      const { error } = await login(email, password);
+      if (error) {
+        setError(error.message);
+      } else {
+        navigateTo('/dashboard');
+      }
+    } catch (e) {
+      console.error(e);
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
@@ -25,29 +45,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
           <CardDescription>Contact tech on Slack for credentials</CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            action={(formData) => {
-              const email = formData.get('email')?.toString();
-              const pass = formData.get('password')?.toString();
-              if (email && pass) {
-                setLoading(true);
-                login(email, pass)
-                  .then((response) => {
-                    if (response.error) {
-                      setError(response.error);
-                    } else {
-                      setUser(response.data.user);
-                      setSession(response.data.session);
-                      navigateTo('/dashboard');
-                    }
-                  })
-                  .catch((e) => {
-                    console.error(e);
-                  })
-                  .finally(() => setLoading(false));
-              }
-            }}
-          >
+          <form action={handleSubmit}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
@@ -58,7 +56,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               </div>
               <div className="flex flex-col gap-3">
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading && <Loader2Icon className="animate-spin" />}
+                  {loading && <Spinner />}
                   Login
                 </Button>
               </div>
@@ -69,7 +67,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
       {error && (
         <Alert variant="destructive">
           <AlertTitle>Authentication error!</AlertTitle>
-          <AlertDescription>{error.message}</AlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
     </div>
