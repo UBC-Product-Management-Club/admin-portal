@@ -12,7 +12,7 @@ const RawEventSchema = z.object({
     blurb: z.string(),
     description: z.string(),
     media: z.array(z.url()),
-    thumbnail: z.url(),
+    thumbnail: z.url().nullable(),
     member_price: z.number(),
     non_member_price: z.number(),
     max_attendees: z.number(),
@@ -24,7 +24,7 @@ const RawEventSchema = z.object({
     waitlist_form: z.url().nullable().optional(),
 });
 
-const BasicEventSchema = RawEventSchema.pick({event_id: true, name: true})
+const BasicEventSchema = RawEventSchema.pick({event_id: true, name: true, thumbnail: true, date: true})
 
 const BasicEventsSchema = z.array(BasicEventSchema)
 
