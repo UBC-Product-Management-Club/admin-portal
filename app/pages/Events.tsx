@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useEvents } from '@/hooks/useEvents';
 import EventCard from '@/components/event-card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
+import { Plus } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -64,6 +66,11 @@ export default function Events({ loaderData, actionData, params, matches }: Rout
     console.log('Navigate to event:', eventId);
   };
 
+  const handleCreateEvent = () => {
+    // TODO: Route to create event page
+    console.log('Navigate to create event');
+  };
+
   if (!events) {
     return (
       <div className="p-6">
@@ -71,7 +78,7 @@ export default function Events({ loaderData, actionData, params, matches }: Rout
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-2">
-              <Skeleton className="aspect-square w-full rounded-xl" />
+              <Skeleton className="aspect-video w-full rounded-xl" />
               <Skeleton className="h-4 w-3/4 rounded" />
             </div>
           ))}
@@ -105,6 +112,15 @@ export default function Events({ loaderData, actionData, params, matches }: Rout
         <p className="text-muted-foreground text-sm">No events for this school year.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <Card
+            className="group flex flex-col items-center justify-center cursor-pointer p-0 py-0 gap-0 border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+            onClick={handleCreateEvent}
+          >
+            <div className="flex flex-col items-center justify-center gap-2 aspect-[4/5] w-full">
+              <Plus className="size-10 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <span className="text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors">Create Event</span>
+            </div>
+          </Card>
           {filteredEvents.map((event) => (
             <EventCard
               key={event.event_id}
