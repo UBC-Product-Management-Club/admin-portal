@@ -54,6 +54,11 @@ const data = {
       route: '/emails',
       icon: IconFolder,
     },
+    {
+      title: 'Settings',
+      route: '/settings',
+      icon: IconSettings,
+    },
   ],
 };
 
