@@ -6,6 +6,7 @@ export default [
         route("dashboard", "pages/Dashboard.tsx"),
         route("members", "pages/Members.tsx"),
         route("events", "pages/Events.tsx"),
+        route("events/:eventId", "pages/EventDetail.tsx"),
         route("emails", "pages/Emails.tsx"),
     ]),
 ] satisfies RouteConfig;
