@@ -1,5 +1,3 @@
-import { Link } from 'react-router';
-import { supabase } from '@/config/supabase';
 import { useUserData } from '@/providers/UserDataProvider';
 import type { Route } from '../+types/root';
 
