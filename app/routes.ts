@@ -7,5 +7,6 @@ export default [
         route("members", "pages/Members.tsx"),
         route("events", "pages/Events.tsx"),
         route("emails", "pages/Emails.tsx"),
+        route("settings", "pages/Settings.tsx"),
     ]),
 ] satisfies RouteConfig;

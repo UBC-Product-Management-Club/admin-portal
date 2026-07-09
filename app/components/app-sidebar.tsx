@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { IconChartBar, IconDashboard, IconFolder, IconListDetails } from '@tabler/icons-react';
+import {
+  IconChartBar,
+  IconDashboard,
+  IconFolder,
+  IconListDetails,
+  IconSettings,
+} from '@tabler/icons-react';
 
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -37,6 +43,11 @@ const data = {
       title: 'Emails',
       route: '/emails',
       icon: IconFolder,
+    },
+    {
+      title: 'Portal Settings',
+      route: '/settings',
+      icon: IconSettings,
     },
   ],
 };

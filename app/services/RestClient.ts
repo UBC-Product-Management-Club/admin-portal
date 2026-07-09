@@ -24,8 +24,18 @@ export class RestClient {
         const response = await fetch(`${this.baseUrl}${path}`, { ...options, headers });
 
         if (!response.ok) {
-            // Optionally log or throw a custom error
-            throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+            let message = `HTTP error ${response.status}: ${response.statusText}`;
+            try {
+                const errorBody = await response.json();
+                if (errorBody?.message) {
+                    message = errorBody.message;
+                } else if (errorBody?.error) {
+                    message = errorBody.error;
+                }
+            } catch {
+                // ignore non-json error bodies
+            }
+            throw new Error(message);
         }
 
         const contentType = response.headers.get('Content-Type') || '';
@@ -68,6 +78,22 @@ export class RestClient {
     ): Promise<TResponse> {
         return this.request<TResponse>(path, {
             method: 'PUT',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                ...headers,
+            },
+            body: JSON.stringify(body),
+        });
+    }
+
+    public patch<TRequest, TResponse>(
+        path: string,
+        body: TRequest,
+        headers: HeadersInit = {}
+    ): Promise<TResponse> {
+        return this.request<TResponse>(path, {
+            method: 'PATCH',
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
