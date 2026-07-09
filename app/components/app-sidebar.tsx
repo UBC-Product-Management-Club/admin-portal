@@ -55,7 +55,7 @@ const data = {
       icon: IconFolder,
     },
     {
-      title: 'Settings',
+      title: 'Portal Settings',
       route: '/settings',
       icon: IconSettings,
     },

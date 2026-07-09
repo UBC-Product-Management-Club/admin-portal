@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
 export function meta() {
-  return [{ title: 'Settings | PMC Admin portal' }];
+  return [{ title: 'Portal Settings | PMC Admin portal' }];
 }
 
 export default function Settings() {
@@ -22,7 +22,7 @@ export default function Settings() {
   if (loading) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-semibold">Settings</h1>
+        <h1 className="text-2xl font-semibold">Portal Settings</h1>
         <p className="mt-4 text-muted-foreground">Loading...</p>
       </div>
     );
@@ -30,7 +30,7 @@ export default function Settings() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+      <h1 className="text-2xl font-semibold">Portal Settings</h1>
 
       <Card className="mt-6 w-[31rem]">
         <CardContent>
