@@ -1,6 +1,7 @@
 import type { BasicEvent, BasicEvents } from '@/lib/types/Event';
 import type { Route } from '../+types/root';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useEvents } from '@/hooks/useEvents';
 import EventCard from '@/components/event-card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,26 +15,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-/**
- * Returns the school year label for a given ISO date string.
- * A school year runs Sept 1 – Aug 31.
- * e.g. "2024-11-29" → "2024-2025", "2025-03-15" → "2024-2025"
- */
+// Returns the school year label for a given ISO date string
+// A school year runs Sept 1 – Aug 31
+// e.g. "2024-11-29" -> "2024-2025", "2025-03-15" -> "2024-2025"
 function getSchoolYear(dateStr: string): string {
   const date = new Date(dateStr);
   const year = date.getFullYear();
-  const month = date.getMonth(); // 0-indexed, so Aug = 7
+  const month = date.getMonth(); // 0-indexed, so January = 0
   if (month >= 8) {
-    // Sept (8) through Dec (11) → starts this calendar year
+    // Sept (8) through Dec (11) -> starts this calendar year
     return `${year}-${year + 1}`;
   }
-  // Jan (0) through Aug (7) → started previous calendar year
+  // Jan (0) through Aug (7) -> started previous calendar year
   return `${year - 1}-${year}`;
 }
 
-/**
- * Derives sorted unique school years from the events list (newest first).
- */
+// Derives sorted unique school years from the events list (newest first)
 function getAvailableSchoolYears(events: BasicEvents): string[] {
   const years = new Set(events.map((e) => getSchoolYear(e.date)));
   return Array.from(years).sort().reverse();
@@ -61,9 +58,9 @@ export default function Events({ loaderData, actionData, params, matches }: Rout
     return events.filter((e) => getSchoolYear(e.date) === selectedYear);
   }, [events, selectedYear]);
 
+  const navigate = useNavigate();
   const handleEventClick = (eventId: string) => {
-    // TODO: Route to event detail page, e.g. navigate(`/events/${eventId}`)
-    console.log('Navigate to event:', eventId);
+    navigate(`/events/${eventId}`);
   };
 
   const handleCreateEvent = () => {

@@ -27,8 +27,8 @@ export function NavMain({
         <SidebarMenu></SidebarMenu>
         <SidebarMenu>
           {items.map((item) => (
-            <Link to={item.route} key={item.route}>
-              <SidebarMenuItem key={item.title}>
+            <Link to={item.route} key={item.title}>
+              <SidebarMenuItem>
                 <SidebarMenuButton tooltip={item.title} isActive={location.pathname === item.route}>
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>
