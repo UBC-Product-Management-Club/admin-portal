@@ -1,4 +1,5 @@
 import { useEvents } from "../hooks/useEvents"
+import { useEventEditForm } from "../hooks/useEventEditForm"
 import type { Event } from "../lib/types/Event";
 import { formatDate, formatTime } from "@/lib/utils";
 import { useState, useEffect } from "react"
@@ -14,63 +15,23 @@ import { AlertCircle, Pencil } from "lucide-react"
 import { EventThumbnail } from "./event/EventThumbnail"
 
 export default function EventPage({ event_id }: { event_id: string }) {
-    const { getEvent, updateThumbnail } = useEvents();
+    const { getEvent } = useEvents();
     const [event, setEvent] = useState<Event | undefined>();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isEditing, setIsEditing] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [saveError, setSaveError] = useState<string | null>(null);
-    // A newly picked thumbnail, held locally until Save so nothing touches
-    // Supabase until the user commits the change.
-    const [pendingThumbnail, setPendingThumbnail] = useState<File | null>(null);
-    const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
-    const clearPendingThumbnail = () => {
-        setThumbnailPreview((prev) => {
-            if (prev) URL.revokeObjectURL(prev);
-            return null;
-        });
-        setPendingThumbnail(null);
-    };
-
-    const handleFileSelected = (file: File, previewUrl: string) => {
-        if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
-        setPendingThumbnail(file);
-        setThumbnailPreview(previewUrl);
-    };
-
-    const handleEdit = () => {
-        setSaveError(null);
-        setIsEditing(true);
-    };
-
-    const handleCancel = () => {
-        clearPendingThumbnail();
-        setSaveError(null);
-        setIsEditing(false);
-    };
-
-    const handleSave = async () => {
-        if (!event) return;
-
-        if (pendingThumbnail) {
-            setSaving(true);
-            setSaveError(null);
-            try {
-                const updated = await updateThumbnail(event.eventId, pendingThumbnail);
-                setEvent(updated);
-                clearPendingThumbnail();
-            } catch (err) {
-                setSaveError(err instanceof Error ? err.message : "Failed to save thumbnail");
-                return;
-            } finally {
-                setSaving(false);
-            }
-        }
-
-        setIsEditing(false);
-    };
+    const {
+        isEditing,
+        saving,
+        saveError,
+        form,
+        thumbnailPreview,
+        setField,
+        startEditing,
+        cancel,
+        save,
+        onFileSelected,
+    } = useEventEditForm(event, setEvent);
 
     useEffect(() => {
         setLoading(true);
@@ -118,10 +79,10 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     <div className="absolute left-6 top-0 flex items-center gap-2">
                         {isEditing ? (
                             <>
-                                <Button size="sm" onClick={handleSave} disabled={saving}>
+                                <Button size="sm" onClick={save} disabled={saving}>
                                     {saving ? "Saving..." : "Save"}
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={handleCancel} disabled={saving}>
+                                <Button size="sm" variant="outline" onClick={cancel} disabled={saving}>
                                     Cancel
                                 </Button>
                             </>
@@ -130,44 +91,69 @@ export default function EventPage({ event_id }: { event_id: string }) {
                                 size="icon"
                                 variant="ghost"
                                 aria-label="Edit event"
-                                onClick={handleEdit}
+                                onClick={startEditing}
                             >
                                 <Pencil />
                             </Button>
                         )}
                     </div>
-                    <CardTitle className="text-2xl">{event.name}</CardTitle>
+                    {isEditing && form ? (
+                        <Input
+                            aria-label="Event name"
+                            value={form.name}
+                            onChange={(e) => setField("name", e.target.value)}
+                            className="mx-auto max-w-md text-center text-2xl font-semibold md:text-2xl"
+                        />
+                    ) : (
+                        <CardTitle className="text-2xl">{event.name}</CardTitle>
+                    )}
                 </CardHeader>
                 <EventThumbnail
                     thumbnail={thumbnailPreview ?? event.thumbnail}
                     eventName={event.name}
                     isEditing={isEditing}
-                    onFileSelected={handleFileSelected}
+                    onFileSelected={onFileSelected}
                 />
                 <CardContent className="flex flex-col gap-5">
                     {saveError && (
                         <Alert variant="destructive">
                             <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Couldn't save thumbnail</AlertTitle>
+                            <AlertTitle>Couldn't save changes</AlertTitle>
                             <AlertDescription>{saveError}</AlertDescription>
                         </Alert>
                     )}
                     {/* Blurb */}
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="event-blurb">Blurb</Label>
-                        <Textarea id="event-blurb" value={event.blurb} readOnly />
+                        <Textarea
+                            id="event-blurb"
+                            value={form ? form.blurb : event.blurb}
+                            onChange={(e) => setField("blurb", e.target.value)}
+                            readOnly={!isEditing}
+                        />
                     </div>
 
                     {/* Description */}
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="event-description">Description</Label>
-                        <Textarea id="event-description" value={event.description} readOnly className="min-h-24" />
+                        <Textarea
+                            id="event-description"
+                            value={form ? form.description : event.description}
+                            onChange={(e) => setField("description", e.target.value)}
+                            readOnly={!isEditing}
+                            className="min-h-24"
+                        />
                     </div>
 
                     {/* Location */}
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="event-location">Location</Label>
-                        <Input id="event-location" value={event.location} readOnly />
+                        <Input
+                            id="event-location"
+                            value={form ? form.location : event.location}
+                            onChange={(e) => setField("location", e.target.value)}
+                            readOnly={!isEditing}
+                        />
                     </div>
 
                     {/* Start Date & End Date */}
@@ -210,7 +196,14 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="event-max-attendees">Max Attendees</Label>
-                            <Input id="event-max-attendees" value={String(event.maxAttendees)} readOnly />
+                            <Input
+                                id="event-max-attendees"
+                                type="number"
+                                min={1}
+                                value={form ? form.maxAttendees : String(event.maxAttendees)}
+                                onChange={(e) => setField("maxAttendees", e.target.value)}
+                                readOnly={!isEditing}
+                            />
                         </div>
                         <div className="flex flex-col gap-2">
                             <Label>Capacity</Label>

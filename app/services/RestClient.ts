@@ -77,6 +77,22 @@ export class RestClient {
         });
     }
 
+    public patch<TRequest, TResponse>(
+        path: string,
+        body: TRequest,
+        headers: HeadersInit = {}
+    ): Promise<TResponse> {
+        return this.request<TResponse>(path, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                ...headers,
+            },
+            body: JSON.stringify(body),
+        });
+    }
+
     public patchFormData<TResponse>(
         path: string,
         formData: FormData,

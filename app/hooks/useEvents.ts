@@ -1,4 +1,5 @@
 import { BasicEventsSchema, EventSchema } from "@/lib/types/Event";
+import type { EventUpdatePayload } from "@/lib/types/Event";
 import { EventService } from "@/services/EventService";
 import { useCallback, useMemo } from "react";
 
@@ -15,10 +16,15 @@ export function useEvents() {
         return EventSchema.parse(data)
     }, [eventService])
 
+    const updateEvent = useCallback(async (event_id: string, payload: EventUpdatePayload) => {
+        const data = await eventService.updateEvent(event_id, payload)
+        return EventSchema.parse(data)
+    }, [eventService])
+
     const updateThumbnail = useCallback(async (event_id: string, file: File) => {
         const data = await eventService.updateThumbnail(event_id, file)
         return EventSchema.parse(data)
     }, [eventService])
 
-    return { getBasicEventInfo, getEvent, updateThumbnail }
+    return { getBasicEventInfo, getEvent, updateEvent, updateThumbnail }
 } 
