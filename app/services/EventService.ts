@@ -12,6 +12,12 @@ class EventService extends BaseService {
         return this.client.get(`${this.path}/${event_id}`, this.headers)
     }
 
+    updateThumbnail(event_id: string, file: File): Promise<Event> {
+        const formData = new FormData();
+        formData.append("thumbnail", file);
+        return this.client.patchFormData(`${this.path}/${event_id}/thumbnail`, formData)
+    }
+
 }
 
 export { EventService }

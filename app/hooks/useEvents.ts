@@ -15,5 +15,10 @@ export function useEvents() {
         return EventSchema.parse(data)
     }, [eventService])
 
-    return { getBasicEventInfo, getEvent } 
+    const updateThumbnail = useCallback(async (event_id: string, file: File) => {
+        const data = await eventService.updateThumbnail(event_id, file)
+        return EventSchema.parse(data)
+    }, [eventService])
+
+    return { getBasicEventInfo, getEvent, updateThumbnail }
 } 

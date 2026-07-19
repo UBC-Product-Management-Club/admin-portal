@@ -77,6 +77,21 @@ export class RestClient {
         });
     }
 
+    public patchFormData<TResponse>(
+        path: string,
+        formData: FormData,
+        headers: HeadersInit = {}
+    ): Promise<TResponse> {
+        // No Content-Type header: the browser sets multipart/form-data with the
+        // correct boundary automatically when the body is a FormData instance.
+        return this.request<TResponse>(path, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers,
+            body: formData,
+        });
+    }
+
     public delete<TResponse>(path: string, headers: HeadersInit = {}): Promise<TResponse> {
         return this.request<TResponse>(path, {
             method: 'DELETE',

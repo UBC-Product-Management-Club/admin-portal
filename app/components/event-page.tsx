@@ -9,13 +9,68 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { AlertCircle, Pencil } from "lucide-react"
+import { EventThumbnail } from "./event/EventThumbnail"
 
 export default function EventPage({ event_id }: { event_id: string }) {
-    const { getEvent } = useEvents();
+    const { getEvent, updateThumbnail } = useEvents();
     const [event, setEvent] = useState<Event | undefined>();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    // A newly picked thumbnail, held locally until Save so nothing touches
+    // Supabase until the user commits the change.
+    const [pendingThumbnail, setPendingThumbnail] = useState<File | null>(null);
+    const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+
+    const clearPendingThumbnail = () => {
+        setThumbnailPreview((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return null;
+        });
+        setPendingThumbnail(null);
+    };
+
+    const handleFileSelected = (file: File, previewUrl: string) => {
+        if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+        setPendingThumbnail(file);
+        setThumbnailPreview(previewUrl);
+    };
+
+    const handleEdit = () => {
+        setSaveError(null);
+        setIsEditing(true);
+    };
+
+    const handleCancel = () => {
+        clearPendingThumbnail();
+        setSaveError(null);
+        setIsEditing(false);
+    };
+
+    const handleSave = async () => {
+        if (!event) return;
+
+        if (pendingThumbnail) {
+            setSaving(true);
+            setSaveError(null);
+            try {
+                const updated = await updateThumbnail(event.eventId, pendingThumbnail);
+                setEvent(updated);
+                clearPendingThumbnail();
+            } catch (err) {
+                setSaveError(err instanceof Error ? err.message : "Failed to save thumbnail");
+                return;
+            } finally {
+                setSaving(false);
+            }
+        }
+
+        setIsEditing(false);
+    };
 
     useEffect(() => {
         setLoading(true);
@@ -59,19 +114,44 @@ export default function EventPage({ event_id }: { event_id: string }) {
         <div className="flex flex-col gap-6 py-4">
             {/* Event Info Card */}
             <Card>
-                <CardHeader className="text-center">
+                <CardHeader className="relative text-center">
+                    <div className="absolute left-6 top-0 flex items-center gap-2">
+                        {isEditing ? (
+                            <>
+                                <Button size="sm" onClick={handleSave} disabled={saving}>
+                                    {saving ? "Saving..." : "Save"}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={handleCancel} disabled={saving}>
+                                    Cancel
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Edit event"
+                                onClick={handleEdit}
+                            >
+                                <Pencil />
+                            </Button>
+                        )}
+                    </div>
                     <CardTitle className="text-2xl">{event.name}</CardTitle>
                 </CardHeader>
-                {event.thumbnail && (
-                    <div className="px-6 pb-2 flex justify-center">
-                        <img
-                            src={event.thumbnail}
-                            alt={`${event.name} thumbnail`}
-                            className="w-full max-w-md rounded-lg object-contain"
-                        />
-                    </div>
-                )}
+                <EventThumbnail
+                    thumbnail={thumbnailPreview ?? event.thumbnail}
+                    eventName={event.name}
+                    isEditing={isEditing}
+                    onFileSelected={handleFileSelected}
+                />
                 <CardContent className="flex flex-col gap-5">
+                    {saveError && (
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Couldn't save thumbnail</AlertTitle>
+                            <AlertDescription>{saveError}</AlertDescription>
+                        </Alert>
+                    )}
                     {/* Blurb */}
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="event-blurb">Blurb</Label>
