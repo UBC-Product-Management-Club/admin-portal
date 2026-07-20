@@ -13,6 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Pencil } from "lucide-react"
 import { EventThumbnail } from "./event/EventThumbnail"
+import { DateParts, TimeParts } from "./event/EventDateTimeFields"
 
 export default function EventPage({ event_id }: { event_id: string }) {
     const { getEvent } = useEvents();
@@ -159,24 +160,40 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     {/* Start Date & End Date */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-start-date">Start Date</Label>
-                            <Input id="event-start-date" value={formatDate(event.startTime)} readOnly />
+                            <Label>Start Date</Label>
+                            {isEditing && form ? (
+                                <DateParts form={form} setField={setField} prefix="start" />
+                            ) : (
+                                <Input value={formatDate(event.startTime)} readOnly />
+                            )}
                         </div>
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-end-date">End Date</Label>
-                            <Input id="event-end-date" value={formatDate(event.endTime)} readOnly />
+                            <Label>End Date</Label>
+                            {isEditing && form ? (
+                                <DateParts form={form} setField={setField} prefix="end" />
+                            ) : (
+                                <Input value={formatDate(event.endTime)} readOnly />
+                            )}
                         </div>
                     </div>
 
                     {/* Start Time & End Time */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-start-time">Start Time</Label>
-                            <Input id="event-start-time" value={formatTime(event.startTime)} readOnly />
+                            <Label>Start Time</Label>
+                            {isEditing && form ? (
+                                <TimeParts form={form} setField={setField} prefix="start" />
+                            ) : (
+                                <Input value={formatTime(event.startTime)} readOnly />
+                            )}
                         </div>
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-end-time">End Time</Label>
-                            <Input id="event-end-time" value={formatTime(event.endTime)} readOnly />
+                            <Label>End Time</Label>
+                            {isEditing && form ? (
+                                <TimeParts form={form} setField={setField} prefix="end" />
+                            ) : (
+                                <Input value={formatTime(event.endTime)} readOnly />
+                            )}
                         </div>
                     </div>
 

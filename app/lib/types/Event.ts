@@ -63,6 +63,8 @@ export interface EventUpdatePayload {
     description?: string;
     location?: string;
     max_attendees?: number;
+    start_time?: string;
+    end_time?: string;
 }
 export interface BasicEvent extends z.infer<typeof BasicEventSchema> { }
 export interface BasicEvents extends z.infer<typeof BasicEventsSchema> { }

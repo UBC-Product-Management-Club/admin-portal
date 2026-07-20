@@ -6,7 +6,7 @@ export class RestClient {
 
     static #instance: RestClient
 
-    private constructor() {}
+    private constructor() { }
 
     public static getRestClient(): RestClient {
         if (!RestClient.#instance) {
@@ -20,12 +20,26 @@ export class RestClient {
         if (!access_token) {
             throw new Error("No access token found!")
         }
-        const headers = {...options.headers, "Authorization": `Bearer ${access_token}`};
+        const headers = { ...options.headers, "Authorization": `Bearer ${access_token}` };
         const response = await fetch(`${this.baseUrl}${path}`, { ...options, headers });
 
         if (!response.ok) {
-            // Optionally log or throw a custom error
-            throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+            let message = `HTTP error ${response.status}: ${response.statusText}`;
+            const body = await response.json().catch(() => null);
+            if (body && typeof body.error === "string") {
+                message = body.error;
+                const details: string[] = [];
+                if (body.fieldErrors && typeof body.fieldErrors === "object") {
+                    for (const [field, msgs] of Object.entries(body.fieldErrors as Record<string, string[]>)) {
+                        details.push(`${field}: ${msgs.join(", ")}`);
+                    }
+                }
+                if (Array.isArray(body.formErrors)) {
+                    details.push(...body.formErrors);
+                }
+                if (details.length) message = `${message} — ${details.join("; ")}`;
+            }
+            throw new Error(message);
         }
 
         const contentType = response.headers.get('Content-Type') || '';
