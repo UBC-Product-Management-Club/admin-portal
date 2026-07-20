@@ -1,4 +1,5 @@
 import { useEvents } from "../hooks/useEvents"
+import { useEventEditForm } from "../hooks/useEventEditForm"
 import type { Event } from "../lib/types/Event";
 import { formatDate, formatTime } from "@/lib/utils";
 import { useState, useEffect } from "react"
@@ -9,13 +10,29 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { AlertCircle, Pencil } from "lucide-react"
+import { EventThumbnail } from "./event/EventThumbnail"
+import { DateParts, TimeParts } from "./event/EventDateTimeFields"
 
 export default function EventPage({ event_id }: { event_id: string }) {
     const { getEvent } = useEvents();
     const [event, setEvent] = useState<Event | undefined>();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const {
+        isEditing,
+        saving,
+        saveError,
+        form,
+        thumbnailPreview,
+        setField,
+        startEditing,
+        cancel,
+        save,
+        onFileSelected,
+    } = useEventEditForm(event, setEvent);
 
     useEffect(() => {
         setLoading(true);
@@ -59,58 +76,124 @@ export default function EventPage({ event_id }: { event_id: string }) {
         <div className="flex flex-col gap-6 py-4">
             {/* Event Info Card */}
             <Card>
-                <CardHeader className="text-center">
-                    <CardTitle className="text-2xl">{event.name}</CardTitle>
-                </CardHeader>
-                {event.thumbnail && (
-                    <div className="px-6 pb-2 flex justify-center">
-                        <img
-                            src={event.thumbnail}
-                            alt={`${event.name} thumbnail`}
-                            className="w-full max-w-md rounded-lg object-contain"
-                        />
+                <CardHeader className="relative text-center">
+                    <div className="absolute left-6 top-0 flex items-center gap-2">
+                        {isEditing ? (
+                            <>
+                                <Button size="sm" onClick={save} disabled={saving}>
+                                    {saving ? "Saving..." : "Save"}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={cancel} disabled={saving}>
+                                    Cancel
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Edit event"
+                                onClick={startEditing}
+                            >
+                                <Pencil />
+                            </Button>
+                        )}
                     </div>
-                )}
+                    {isEditing && form ? (
+                        <Input
+                            aria-label="Event name"
+                            value={form.name}
+                            onChange={(e) => setField("name", e.target.value)}
+                            className="mx-auto max-w-md text-center text-2xl font-semibold md:text-2xl"
+                        />
+                    ) : (
+                        <CardTitle className="text-2xl">{event.name}</CardTitle>
+                    )}
+                </CardHeader>
+                <EventThumbnail
+                    thumbnail={thumbnailPreview ?? event.thumbnail}
+                    eventName={event.name}
+                    isEditing={isEditing}
+                    onFileSelected={onFileSelected}
+                />
                 <CardContent className="flex flex-col gap-5">
+                    {saveError && (
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Couldn't save changes</AlertTitle>
+                            <AlertDescription>{saveError}</AlertDescription>
+                        </Alert>
+                    )}
                     {/* Blurb */}
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="event-blurb">Blurb</Label>
-                        <Textarea id="event-blurb" value={event.blurb} readOnly />
+                        <Textarea
+                            id="event-blurb"
+                            value={form ? form.blurb : event.blurb}
+                            onChange={(e) => setField("blurb", e.target.value)}
+                            readOnly={!isEditing}
+                        />
                     </div>
 
                     {/* Description */}
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="event-description">Description</Label>
-                        <Textarea id="event-description" value={event.description} readOnly className="min-h-24" />
+                        <Textarea
+                            id="event-description"
+                            value={form ? form.description : event.description}
+                            onChange={(e) => setField("description", e.target.value)}
+                            readOnly={!isEditing}
+                            className="min-h-24"
+                        />
                     </div>
 
                     {/* Location */}
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="event-location">Location</Label>
-                        <Input id="event-location" value={event.location} readOnly />
+                        <Input
+                            id="event-location"
+                            value={form ? form.location : event.location}
+                            onChange={(e) => setField("location", e.target.value)}
+                            readOnly={!isEditing}
+                        />
                     </div>
 
                     {/* Start Date & End Date */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-start-date">Start Date</Label>
-                            <Input id="event-start-date" value={formatDate(event.startTime)} readOnly />
+                            <Label>Start Date</Label>
+                            {isEditing && form ? (
+                                <DateParts form={form} setField={setField} prefix="start" />
+                            ) : (
+                                <Input value={formatDate(event.startTime)} readOnly />
+                            )}
                         </div>
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-end-date">End Date</Label>
-                            <Input id="event-end-date" value={formatDate(event.endTime)} readOnly />
+                            <Label>End Date</Label>
+                            {isEditing && form ? (
+                                <DateParts form={form} setField={setField} prefix="end" />
+                            ) : (
+                                <Input value={formatDate(event.endTime)} readOnly />
+                            )}
                         </div>
                     </div>
 
                     {/* Start Time & End Time */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-start-time">Start Time</Label>
-                            <Input id="event-start-time" value={formatTime(event.startTime)} readOnly />
+                            <Label>Start Time</Label>
+                            {isEditing && form ? (
+                                <TimeParts form={form} setField={setField} prefix="start" />
+                            ) : (
+                                <Input value={formatTime(event.startTime)} readOnly />
+                            )}
                         </div>
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-end-time">End Time</Label>
-                            <Input id="event-end-time" value={formatTime(event.endTime)} readOnly />
+                            <Label>End Time</Label>
+                            {isEditing && form ? (
+                                <TimeParts form={form} setField={setField} prefix="end" />
+                            ) : (
+                                <Input value={formatTime(event.endTime)} readOnly />
+                            )}
                         </div>
                     </div>
 
@@ -130,7 +213,13 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="event-max-attendees">Max Attendees</Label>
-                            <Input id="event-max-attendees" value={String(event.maxAttendees)} readOnly />
+                            <Input
+                                id="event-max-attendees"
+                                inputMode="numeric"
+                                value={form ? form.maxAttendees : String(event.maxAttendees)}
+                                onChange={(e) => setField("maxAttendees", e.target.value.replace(/\D/g, ""))}
+                                readOnly={!isEditing}
+                            />
                         </div>
                         <div className="flex flex-col gap-2">
                             <Label>Capacity</Label>
