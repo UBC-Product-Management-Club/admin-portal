@@ -78,6 +78,10 @@ export function useEventEditForm(
                 setSaveError("Location can't be empty");
                 return;
             }
+            if (!form.maxAttendees.trim()) {
+                setSaveError("Max attendees is required");
+                return;
+            }
             const maxAttendees = Number(form.maxAttendees);
             if (!Number.isInteger(maxAttendees) || maxAttendees <= 0) {
                 setSaveError("Max attendees must be a positive whole number");

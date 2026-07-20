@@ -198,10 +198,9 @@ export default function EventPage({ event_id }: { event_id: string }) {
                             <Label htmlFor="event-max-attendees">Max Attendees</Label>
                             <Input
                                 id="event-max-attendees"
-                                type="number"
-                                min={1}
+                                inputMode="numeric"
                                 value={form ? form.maxAttendees : String(event.maxAttendees)}
-                                onChange={(e) => setField("maxAttendees", e.target.value)}
+                                onChange={(e) => setField("maxAttendees", e.target.value.replace(/\D/g, ""))}
                                 readOnly={!isEditing}
                             />
                         </div>
