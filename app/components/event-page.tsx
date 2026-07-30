@@ -233,11 +233,29 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="event-member-price">Member Price</Label>
-                            <Input id="event-member-price" value={`$${event.memberPrice.toFixed(2)}`} readOnly />
+                            {isEditing && form ? (
+                                <Input
+                                    id="event-member-price"
+                                    inputMode="decimal"
+                                    value={form.memberPrice}
+                                    onChange={(e) => setField("memberPrice", e.target.value.replace(/[^0-9.]/g, ""))}
+                                />
+                            ) : (
+                                <Input id="event-member-price" value={`$${event.memberPrice.toFixed(2)}`} readOnly />
+                            )}
                         </div>
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="event-non-member-price">Non-Member Price</Label>
-                            <Input id="event-non-member-price" value={`$${event.nonMemberPrice.toFixed(2)}`} readOnly />
+                            {isEditing && form ? (
+                                <Input
+                                    id="event-non-member-price"
+                                    inputMode="decimal"
+                                    value={form.nonMemberPrice}
+                                    onChange={(e) => setField("nonMemberPrice", e.target.value.replace(/[^0-9.]/g, ""))}
+                                />
+                            ) : (
+                                <Input id="event-non-member-price" value={`$${event.nonMemberPrice.toFixed(2)}`} readOnly />
+                            )}
                         </div>
                     </div>
 

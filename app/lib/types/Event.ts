@@ -63,6 +63,8 @@ export interface EventUpdatePayload {
     description?: string;
     location?: string;
     max_attendees?: number;
+    member_price?: number;
+    non_member_price?: number;
     start_time?: string;
     end_time?: string;
     registration_opens?: string;

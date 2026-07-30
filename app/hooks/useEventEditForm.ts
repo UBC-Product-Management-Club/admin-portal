@@ -21,6 +21,8 @@ export interface EditForm extends PrefixedParts<DateTimePrefix> {
     description: string;
     location: string;
     maxAttendees: string;
+    memberPrice: string;
+    nonMemberPrice: string;
 }
 
 interface DateTimeParts {
@@ -148,6 +150,8 @@ export function useEventEditForm(
             description: event.description,
             location: event.location,
             maxAttendees: String(event.maxAttendees),
+            memberPrice: event.memberPrice.toFixed(2),
+            nonMemberPrice: event.nonMemberPrice.toFixed(2),
             ...toFormFields("start", event.startTime),
             ...toFormFields("end", event.endTime),
             ...toFormFields("regOpen", event.registrationOpens),
@@ -194,6 +198,20 @@ export function useEventEditForm(
             if (form.location !== event.location) payload.location = form.location;
             const maxAttendees = Number(form.maxAttendees);
             if (maxAttendees !== event.maxAttendees) payload.max_attendees = maxAttendees;
+
+            const memberPrice = Number(form.memberPrice);
+            if (!Number.isFinite(memberPrice) || memberPrice < 0) {
+                setSaveError("Enter a valid member price");
+                return;
+            }
+            if (memberPrice !== event.memberPrice) payload.member_price = memberPrice;
+
+            const nonMemberPrice = Number(form.nonMemberPrice);
+            if (!Number.isFinite(nonMemberPrice) || nonMemberPrice < 0) {
+                setSaveError("Enter a valid non-member price");
+                return;
+            }
+            if (nonMemberPrice !== event.nonMemberPrice) payload.non_member_price = nonMemberPrice;
 
             const differs = (iso: string, stored: string) =>
                 new Date(iso).getTime() !== new Date(stored).getTime();
