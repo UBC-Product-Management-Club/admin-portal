@@ -2,27 +2,25 @@ import { useState } from "react";
 import { useEvents } from "./useEvents";
 import type { Event, EventUpdatePayload } from "@/lib/types/Event";
 
-export interface EditForm {
+// Each editable timestamp is held as six form fields named `${prefix}Day`,
+// `${prefix}Month`, and so on.
+export type DateTimePrefix = "start" | "end" | "regOpen" | "regClose";
+
+type DateTimePartName = "Day" | "Month" | "Year" | "Hour" | "Minute" | "Meridiem";
+
+// Date/time parts. Times are interpreted as UTC to match the app's display
+// (formatDate/formatTime render with timeZone: "UTC"). hour is "1".."12",
+// minute is "0".."59", meridiem is "AM" | "PM".
+type PrefixedParts<P extends DateTimePrefix> = {
+    [Part in DateTimePartName as `${P}${Part}`]: string;
+};
+
+export interface EditForm extends PrefixedParts<DateTimePrefix> {
     name: string;
     blurb: string;
     description: string;
     location: string;
     maxAttendees: string;
-    // Date/time parts. Times are interpreted as UTC to match the app's display
-    // (formatDate/formatTime render with timeZone: "UTC"). hour is "1".."12",
-    // minute is "0".."59", meridiem is "AM" | "PM".
-    startDay: string;
-    startMonth: string;
-    startYear: string;
-    startHour: string;
-    startMinute: string;
-    startMeridiem: string;
-    endDay: string;
-    endMonth: string;
-    endYear: string;
-    endHour: string;
-    endMinute: string;
-    endMeridiem: string;
 }
 
 interface DateTimeParts {
@@ -32,6 +30,31 @@ interface DateTimeParts {
     hour: string;
     minute: string;
     meridiem: string;
+}
+
+// Explode a stored ISO datetime into the form fields for one prefix.
+function toFormFields<P extends DateTimePrefix>(prefix: P, iso: string): PrefixedParts<P> {
+    const p = toParts(iso);
+    return {
+        [`${prefix}Day`]: p.day,
+        [`${prefix}Month`]: p.month,
+        [`${prefix}Year`]: p.year,
+        [`${prefix}Hour`]: p.hour,
+        [`${prefix}Minute`]: p.minute,
+        [`${prefix}Meridiem`]: p.meridiem,
+    } as PrefixedParts<P>;
+}
+
+// Gather one prefix's form fields back into loose parts for partsToISO.
+function fromFormFields(form: EditForm, prefix: DateTimePrefix): DateTimeParts {
+    return {
+        day: form[`${prefix}Day`],
+        month: form[`${prefix}Month`],
+        year: form[`${prefix}Year`],
+        hour: form[`${prefix}Hour`],
+        minute: form[`${prefix}Minute`],
+        meridiem: form[`${prefix}Meridiem`],
+    };
 }
 
 // Split a stored ISO datetime into UTC-based, 12-hour form fields.
@@ -119,26 +142,16 @@ export function useEventEditForm(
 
     const startEditing = () => {
         if (!event) return;
-        const s = toParts(event.startTime);
-        const e = toParts(event.endTime);
         setForm({
             name: event.name,
             blurb: event.blurb,
             description: event.description,
             location: event.location,
             maxAttendees: String(event.maxAttendees),
-            startDay: s.day,
-            startMonth: s.month,
-            startYear: s.year,
-            startHour: s.hour,
-            startMinute: s.minute,
-            startMeridiem: s.meridiem,
-            endDay: e.day,
-            endMonth: e.month,
-            endYear: e.year,
-            endHour: e.hour,
-            endMinute: e.minute,
-            endMeridiem: e.meridiem,
+            ...toFormFields("start", event.startTime),
+            ...toFormFields("end", event.endTime),
+            ...toFormFields("regOpen", event.registrationOpens),
+            ...toFormFields("regClose", event.registrationCloses),
         });
         setSaveError(null);
         setIsEditing(true);
@@ -161,24 +174,17 @@ export function useEventEditForm(
         // encoded into the request (JS would silently roll Feb 30 into Mar 2).
         const payload: EventUpdatePayload = {};
         if (form) {
-            const startISO = partsToISO({
-                day: form.startDay,
-                month: form.startMonth,
-                year: form.startYear,
-                hour: form.startHour,
-                minute: form.startMinute,
-                meridiem: form.startMeridiem,
-            });
-            const endISO = partsToISO({
-                day: form.endDay,
-                month: form.endMonth,
-                year: form.endYear,
-                hour: form.endHour,
-                minute: form.endMinute,
-                meridiem: form.endMeridiem,
-            });
+            const startISO = partsToISO(fromFormFields(form, "start"));
+            const endISO = partsToISO(fromFormFields(form, "end"));
             if (!startISO || !endISO) {
                 setSaveError("Enter a valid start and end date/time");
+                return;
+            }
+
+            const regOpenISO = partsToISO(fromFormFields(form, "regOpen"));
+            const regCloseISO = partsToISO(fromFormFields(form, "regClose"));
+            if (!regOpenISO || !regCloseISO) {
+                setSaveError("Enter a valid registration open and close date/time");
                 return;
             }
 
@@ -189,12 +195,20 @@ export function useEventEditForm(
             const maxAttendees = Number(form.maxAttendees);
             if (maxAttendees !== event.maxAttendees) payload.max_attendees = maxAttendees;
 
-            // start_time and end_time must be sent together; include both if either changed.
-            const startChanged = new Date(startISO).getTime() !== new Date(event.startTime).getTime();
-            const endChanged = new Date(endISO).getTime() !== new Date(event.endTime).getTime();
-            if (startChanged || endChanged) {
+            const differs = (iso: string, stored: string) =>
+                new Date(iso).getTime() !== new Date(stored).getTime();
+
+            // Each pair must be sent together; include both if either changed.
+            if (differs(startISO, event.startTime) || differs(endISO, event.endTime)) {
                 payload.start_time = startISO;
                 payload.end_time = endISO;
+            }
+            if (
+                differs(regOpenISO, event.registrationOpens) ||
+                differs(regCloseISO, event.registrationCloses)
+            ) {
+                payload.registration_opens = regOpenISO;
+                payload.registration_closes = regCloseISO;
             }
         }
 

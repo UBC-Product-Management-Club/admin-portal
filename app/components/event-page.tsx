@@ -197,6 +197,38 @@ export default function EventPage({ event_id }: { event_id: string }) {
                         </div>
                     </div>
 
+                    {/* Registration Time */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                            <Label>Registration Opens</Label>
+                            {isEditing && form ? (
+                                <div className="flex flex-col gap-2">
+                                    <DateParts form={form} setField={setField} prefix="regOpen" />
+                                    <TimeParts form={form} setField={setField} prefix="regOpen" />
+                                </div>
+                            ) : (
+                                <Input
+                                    value={`${formatDate(event.registrationOpens)}, ${formatTime(event.registrationOpens)}`}
+                                    readOnly
+                                />
+                            )}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Label>Registration Closes</Label>
+                            {isEditing && form ? (
+                                <div className="flex flex-col gap-2">
+                                    <DateParts form={form} setField={setField} prefix="regClose" />
+                                    <TimeParts form={form} setField={setField} prefix="regClose" />
+                                </div>
+                            ) : (
+                                <Input
+                                    value={`${formatDate(event.registrationCloses)}, ${formatTime(event.registrationCloses)}`}
+                                    readOnly
+                                />
+                            )}
+                        </div>
+                    </div>
+
                     {/* Member Price & Non-Member Price */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">

@@ -1,13 +1,13 @@
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { EditForm } from "@/hooks/useEventEditForm"
+import type { DateTimePrefix, EditForm } from "@/hooks/useEventEditForm"
 
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 
 interface PartsProps {
     form: EditForm;
     setField: (key: keyof EditForm, value: string) => void;
-    prefix: "start" | "end";
+    prefix: DateTimePrefix;
 }
 
 // Day / Month / Year typed as numbers (digits only). Times are UTC (see useEventEditForm).
