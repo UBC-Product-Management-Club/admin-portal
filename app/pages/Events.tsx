@@ -64,8 +64,7 @@ export default function Events({ loaderData, actionData, params, matches }: Rout
   };
 
   const handleCreateEvent = () => {
-    // TODO: Route to create event page
-    console.log('Navigate to create event');
+    navigate('/events/new');
   };
 
   if (!events) {

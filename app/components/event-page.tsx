@@ -5,7 +5,6 @@ import { formatDate, formatTime } from "@/lib/utils";
 import { useState, useEffect } from "react"
 import { Spinner } from "./ui/spinner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
@@ -23,23 +22,7 @@ import {
 } from "lucide-react"
 import { EventThumbnail } from "./event/EventThumbnail"
 import { DateParts, TimeParts } from "./event/EventDateTimeFields"
-
-function SectionHeading({ icon: Icon, children }: { icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
-    return (
-        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            <Icon className="h-4 w-4" />
-            {children}
-        </div>
-    );
-}
-
-// Read-only inputs render as plain text (no border/shadow) so the page reads
-// as a document when not editing, and as a form when editing.
-function readOnlyStyles(isEditing: boolean) {
-    return !isEditing
-        ? "border-transparent shadow-none px-0 bg-transparent read-only:opacity-100"
-        : "";
-}
+import { Field, ReadOnlyInput, SectionHeading, readOnlyStyles } from "./event/EventFields"
 
 export default function EventPage({ event_id }: { event_id: string }) {
     const { getEvent } = useEvents();
@@ -153,8 +136,7 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     {/* Key Event Details */}
                     <div className="flex flex-col gap-4">
                         <SectionHeading icon={Info}>Key Event Details</SectionHeading>
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-blurb">Blurb</Label>
+                        <Field label="Blurb" htmlFor="event-blurb">
                             <Textarea
                                 id="event-blurb"
                                 value={form ? form.blurb : event.blurb}
@@ -162,10 +144,9 @@ export default function EventPage({ event_id }: { event_id: string }) {
                                 readOnly={!isEditing}
                                 className={readOnlyStyles(isEditing)}
                             />
-                        </div>
+                        </Field>
 
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-description">Description</Label>
+                        <Field label="Description" htmlFor="event-description">
                             <Textarea
                                 id="event-description"
                                 value={form ? form.description : event.description}
@@ -173,10 +154,9 @@ export default function EventPage({ event_id }: { event_id: string }) {
                                 readOnly={!isEditing}
                                 className={`min-h-24 ${readOnlyStyles(isEditing)}`}
                             />
-                        </div>
+                        </Field>
 
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="event-location">Location</Label>
+                        <Field label="Location" htmlFor="event-location">
                             <Input
                                 id="event-location"
                                 value={form ? form.location : event.location}
@@ -184,7 +164,7 @@ export default function EventPage({ event_id }: { event_id: string }) {
                                 readOnly={!isEditing}
                                 className={readOnlyStyles(isEditing)}
                             />
-                        </div>
+                        </Field>
                     </div>
 
                     <Separator />
@@ -193,41 +173,37 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     <div className="flex flex-col gap-4">
                         <SectionHeading icon={CalendarDays}>Schedule</SectionHeading>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-2">
-                                <Label>Start Date</Label>
+                            <Field label="Start Date">
                                 {isEditing && form ? (
                                     <DateParts form={form} setField={setField} prefix="start" />
                                 ) : (
-                                    <Input value={formatDate(event.startTime)} readOnly className={readOnlyStyles(false)} />
+                                    <ReadOnlyInput value={formatDate(event.startTime)} />
                                 )}
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <Label>End Date</Label>
+                            </Field>
+                            <Field label="End Date">
                                 {isEditing && form ? (
                                     <DateParts form={form} setField={setField} prefix="end" />
                                 ) : (
-                                    <Input value={formatDate(event.endTime)} readOnly className={readOnlyStyles(false)} />
+                                    <ReadOnlyInput value={formatDate(event.endTime)} />
                                 )}
-                            </div>
+                            </Field>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-2">
-                                <Label>Start Time</Label>
+                            <Field label="Start Time">
                                 {isEditing && form ? (
                                     <TimeParts form={form} setField={setField} prefix="start" />
                                 ) : (
-                                    <Input value={formatTime(event.startTime)} readOnly className={readOnlyStyles(false)} />
+                                    <ReadOnlyInput value={formatTime(event.startTime)} />
                                 )}
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <Label>End Time</Label>
+                            </Field>
+                            <Field label="End Time">
                                 {isEditing && form ? (
                                     <TimeParts form={form} setField={setField} prefix="end" />
                                 ) : (
-                                    <Input value={formatTime(event.endTime)} readOnly className={readOnlyStyles(false)} />
+                                    <ReadOnlyInput value={formatTime(event.endTime)} />
                                 )}
-                            </div>
+                            </Field>
                         </div>
                     </div>
 
@@ -237,36 +213,30 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     <div className="flex flex-col gap-4">
                         <SectionHeading icon={Clock}>Registration Window</SectionHeading>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-2">
-                                <Label>Registration Opens</Label>
+                            <Field label="Registration Opens">
                                 {isEditing && form ? (
                                     <div className="flex flex-col gap-2">
                                         <DateParts form={form} setField={setField} prefix="regOpen" />
                                         <TimeParts form={form} setField={setField} prefix="regOpen" />
                                     </div>
                                 ) : (
-                                    <Input
+                                    <ReadOnlyInput
                                         value={`${formatDate(event.registrationOpens)}, ${formatTime(event.registrationOpens)}`}
-                                        readOnly
-                                        className={readOnlyStyles(false)}
                                     />
                                 )}
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <Label>Registration Closes</Label>
+                            </Field>
+                            <Field label="Registration Closes">
                                 {isEditing && form ? (
                                     <div className="flex flex-col gap-2">
                                         <DateParts form={form} setField={setField} prefix="regClose" />
                                         <TimeParts form={form} setField={setField} prefix="regClose" />
                                     </div>
                                 ) : (
-                                    <Input
+                                    <ReadOnlyInput
                                         value={`${formatDate(event.registrationCloses)}, ${formatTime(event.registrationCloses)}`}
-                                        readOnly
-                                        className={readOnlyStyles(false)}
                                     />
                                 )}
-                            </div>
+                            </Field>
                         </div>
                     </div>
 
@@ -276,8 +246,7 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     <div className="flex flex-col gap-4">
                         <SectionHeading icon={Ticket}>Pricing</SectionHeading>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-2">
-                                <Label htmlFor="event-member-price">Member Price</Label>
+                            <Field label="Member Price" htmlFor="event-member-price">
                                 {isEditing && form ? (
                                     <Input
                                         id="event-member-price"
@@ -286,16 +255,13 @@ export default function EventPage({ event_id }: { event_id: string }) {
                                         onChange={(e) => setField("memberPrice", e.target.value.replace(/[^0-9.]/g, ""))}
                                     />
                                 ) : (
-                                    <Input
+                                    <ReadOnlyInput
                                         id="event-member-price"
                                         value={`$${event.memberPrice.toFixed(2)}`}
-                                        readOnly
-                                        className={readOnlyStyles(false)}
                                     />
                                 )}
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <Label htmlFor="event-non-member-price">Non-Member Price</Label>
+                            </Field>
+                            <Field label="Non-Member Price" htmlFor="event-non-member-price">
                                 {isEditing && form ? (
                                     <Input
                                         id="event-non-member-price"
@@ -304,14 +270,12 @@ export default function EventPage({ event_id }: { event_id: string }) {
                                         onChange={(e) => setField("nonMemberPrice", e.target.value.replace(/[^0-9.]/g, ""))}
                                     />
                                 ) : (
-                                    <Input
+                                    <ReadOnlyInput
                                         id="event-non-member-price"
                                         value={`$${event.nonMemberPrice.toFixed(2)}`}
-                                        readOnly
-                                        className={readOnlyStyles(false)}
                                     />
                                 )}
-                            </div>
+                            </Field>
                         </div>
                     </div>
 
@@ -321,8 +285,7 @@ export default function EventPage({ event_id }: { event_id: string }) {
                     <div className="flex flex-col gap-4">
                         <SectionHeading icon={Users}>Capacity</SectionHeading>
                         <div className="grid grid-cols-2 gap-4 items-end">
-                            <div className="flex flex-col gap-2">
-                                <Label htmlFor="event-max-attendees">Max Attendees</Label>
+                            <Field label="Max Attendees" htmlFor="event-max-attendees">
                                 <Input
                                     id="event-max-attendees"
                                     inputMode="numeric"
@@ -331,16 +294,15 @@ export default function EventPage({ event_id }: { event_id: string }) {
                                     readOnly={!isEditing}
                                     className={readOnlyStyles(isEditing)}
                                 />
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <Label>Registered</Label>
+                            </Field>
+                            <Field label="Registered">
                                 <Badge
                                     variant={event.registered >= event.maxAttendees ? "destructive" : "secondary"}
                                     className="w-fit text-sm px-3 py-1"
                                 >
                                     {event.registered} / {event.maxAttendees} Registered
                                 </Badge>
-                            </div>
+                            </Field>
                         </div>
                     </div>
                 </CardContent>

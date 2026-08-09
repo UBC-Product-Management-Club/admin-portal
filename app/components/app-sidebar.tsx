@@ -39,6 +39,14 @@ const defaultNav = [
   },
 ];
 
+const eventCreateNav = [
+  {
+    title: 'Back to Events',
+    route: '/events',
+    icon: IconArrowLeft,
+  },
+];
+
 const eventDetailNav = [
   {
     title: 'Back to Events',
@@ -62,8 +70,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navigateTo = useNavigate();
   const location = useLocation();
 
-  const isEventDetailPage = /^\/events\/.+$/.test(location.pathname);
-  const navItems = isEventDetailPage ? eventDetailNav : defaultNav;
+  const isEventCreatePage = location.pathname === '/events/new';
+  const isEventDetailPage = !isEventCreatePage && /^\/events\/.+$/.test(location.pathname);
+  const navItems = isEventCreatePage
+    ? eventCreateNav
+    : isEventDetailPage
+      ? eventDetailNav
+      : defaultNav;
 
   const displayName = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'User';
   const displayEmail = user?.email ?? '';
