@@ -1,4 +1,4 @@
-import EventCreatePage from '@/components/event-create-page';
+import { EventCreatePage } from '@/components/event-page';
 
 export default function EventCreate() {
     return (

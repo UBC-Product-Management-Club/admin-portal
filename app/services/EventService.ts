@@ -1,9 +1,20 @@
-import type { BasicEvent, Event, EventUpdatePayload } from "@/lib/types/Event";
+import type { BasicEvent, Event, EventCreatePayload, EventUpdatePayload } from "@/lib/types/Event";
 import { BaseService } from "./BaseService";
 
 class EventService extends BaseService {
     private readonly path: string = "/events"
-    
+
+    createEvent(payload: EventCreatePayload, thumbnail: File | null): Promise<Event> {
+        const formData = new FormData();
+        for (const [field, value] of Object.entries(payload)) {
+            formData.append(field, value);
+        }
+        if (thumbnail) {
+            formData.append("thumbnail", thumbnail);
+        }
+        return this.client.postFormData(`${this.path}/add`, formData)
+    }
+
     getBasicEventInfo(): Promise<BasicEvent[]> {
         return this.client.get(`${this.path}/basic`, this.headers)
     }

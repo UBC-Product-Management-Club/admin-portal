@@ -70,6 +70,21 @@ export interface EventUpdatePayload {
     registration_opens?: string;
     registration_closes?: string;
 }
+
+export interface EventCreatePayload {
+    name: string;
+    blurb: string;
+    description: string;
+    location: string;
+    max_attendees: string;
+    member_price: string;
+    non_member_price: string;
+    start_time: string;
+    end_time: string;
+    registration_opens: string;
+    registration_closes: string;
+}
+
 export interface BasicEvent extends z.infer<typeof BasicEventSchema> { }
 export interface BasicEvents extends z.infer<typeof BasicEventsSchema> { }
 

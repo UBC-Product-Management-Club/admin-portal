@@ -34,7 +34,6 @@ interface DateTimeParts {
     meridiem: string;
 }
 
-// Explode a stored ISO datetime into the form fields for one prefix.
 function toFormFields<P extends DateTimePrefix>(prefix: P, iso: string): PrefixedParts<P> {
     const p = toParts(iso);
     return {
@@ -47,8 +46,7 @@ function toFormFields<P extends DateTimePrefix>(prefix: P, iso: string): Prefixe
     } as PrefixedParts<P>;
 }
 
-// Gather one prefix's form fields back into loose parts for partsToISO.
-function fromFormFields(form: EditForm, prefix: DateTimePrefix): DateTimeParts {
+export function fromFormFields(form: EditForm, prefix: DateTimePrefix): DateTimeParts {
     return {
         day: form[`${prefix}Day`],
         month: form[`${prefix}Month`],
@@ -59,7 +57,6 @@ function fromFormFields(form: EditForm, prefix: DateTimePrefix): DateTimeParts {
     };
 }
 
-// Split a stored ISO datetime into UTC-based, 12-hour form fields.
 function toParts(iso: string): DateTimeParts {
     const d = new Date(iso);
     const hours24 = d.getUTCHours();
@@ -74,9 +71,7 @@ function toParts(iso: string): DateTimeParts {
     };
 }
 
-// Rebuild an ISO datetime (UTC, "+00:00", no milliseconds) from form parts, or
-// return null if the parts don't describe a real calendar date/time.
-function partsToISO(p: DateTimeParts): string | null {
+export function partsToISO(p: DateTimeParts): string | null {
     const raw = [p.year, p.month, p.day, p.hour, p.minute];
     if (raw.some((s) => !s.trim())) return null;
     const [year, month, day, hour12, minute] = raw.map(Number);
@@ -91,8 +86,6 @@ function partsToISO(p: DateTimeParts): string | null {
                 ? 0
                 : hour12;
 
-    // Round-tripping through Date catches every impossible value (Feb 30,
-    // month 13, minute 99...)
     const d = new Date(Date.UTC(year, month - 1, day, hour24, minute));
     if (
         d.getUTCFullYear() !== year ||
@@ -116,10 +109,7 @@ export function useEventEditForm(
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
-    // Editable fields, populated on entering edit mode and dropped on Cancel.
     const [form, setForm] = useState<EditForm | null>(null);
-    // A newly picked thumbnail, held locally until Save so nothing touches
-    // Supabase until the user commits the change.
     const [pendingThumbnail, setPendingThumbnail] = useState<File | null>(null);
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
@@ -171,11 +161,6 @@ export function useEventEditForm(
     const save = async () => {
         if (!event) return;
 
-        // Collect only the fields that actually changed. Field validation is the
-        // backend's job (EventUpdateSchema rejects bad values and RestClient
-        // surfaces its messages) — the one client-side check is that the typed
-        // date parts form a real date, because an impossible date can't even be
-        // encoded into the request (JS would silently roll Feb 30 into Mar 2).
         const payload: EventUpdatePayload = {};
         if (form) {
             const startISO = partsToISO(fromFormFields(form, "start"));

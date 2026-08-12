@@ -107,6 +107,19 @@ export class RestClient {
         });
     }
 
+    public postFormData<TResponse>(
+        path: string,
+        formData: FormData,
+        headers: HeadersInit = {}
+    ): Promise<TResponse> {
+        return this.request<TResponse>(path, {
+            method: 'POST',
+            credentials: 'include',
+            headers,
+            body: formData,
+        });
+    }
+
     public patchFormData<TResponse>(
         path: string,
         formData: FormData,

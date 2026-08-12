@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Field, ReadOnlyInput } from "./EventFields"
 import type { DateTimePrefix, EditForm } from "@/hooks/useEventEditForm"
 
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
@@ -33,6 +34,48 @@ export function DateParts({ form, setField, prefix }: PartsProps) {
     );
 }
 
+// One scheduling field: the editable parts while editing, the stored value as text otherwise.
+export function DateTimeField({
+    label,
+    prefix,
+    parts,
+    editing,
+    form,
+    setField,
+    value,
+}: {
+    label: string;
+    prefix: DateTimePrefix;
+    parts: "date" | "time" | "both";
+    editing: boolean;
+    form: EditForm | null;
+    setField: (key: keyof EditForm, value: string) => void;
+    value: string;
+}) {
+    if (!editing || !form) {
+        return (
+            <Field label={label}>
+                <ReadOnlyInput value={value} />
+            </Field>
+        );
+    }
+
+    return (
+        <Field label={label}>
+            {parts === "both" ? (
+                <div className="flex flex-col gap-2">
+                    <DateParts form={form} setField={setField} prefix={prefix} />
+                    <TimeParts form={form} setField={setField} prefix={prefix} />
+                </div>
+            ) : parts === "date" ? (
+                <DateParts form={form} setField={setField} prefix={prefix} />
+            ) : (
+                <TimeParts form={form} setField={setField} prefix={prefix} />
+            )}
+        </Field>
+    );
+}
+
 // Hour (1-12), minute (00-59), and AM/PM as selects.
 export function TimeParts({ form, setField, prefix }: PartsProps) {
     const hourKey: keyof EditForm = `${prefix}Hour`;
@@ -41,14 +84,14 @@ export function TimeParts({ form, setField, prefix }: PartsProps) {
     return (
         <div className="flex items-center gap-2">
             <Select value={form[hourKey]} onValueChange={(v) => setField(hourKey, v)}>
-                <SelectTrigger className="w-18" aria-label="Hour"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-18" aria-label="Hour"><SelectValue placeholder="12" /></SelectTrigger>
                 <SelectContent>{HOURS.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
             </Select>
             <span className="text-muted-foreground">:</span>
             <Input aria-label="Minute" inputMode="numeric" maxLength={2} placeholder="00" className="w-14 text-center"
                 value={form[minuteKey]} onChange={(e) => setField(minuteKey, e.target.value.replace(/\D/g, ""))} />
             <Select value={form[meridiemKey]} onValueChange={(v) => setField(meridiemKey, v)}>
-                <SelectTrigger className="w-20" aria-label="AM/PM"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-20" aria-label="AM/PM"><SelectValue placeholder="AM" /></SelectTrigger>
                 <SelectContent>
                     <SelectItem value="AM">AM</SelectItem>
                     <SelectItem value="PM">PM</SelectItem>
