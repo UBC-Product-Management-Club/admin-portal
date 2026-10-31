@@ -26,3 +26,6 @@ npm-debug.log*
 
 # React Router
 .react-router/
+
+# Design spec (kept local)
+public/HLD_specs.pdf

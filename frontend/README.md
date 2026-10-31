@@ -1,8 +1,10 @@
 # Admin Portal — Frontend
 
-React 19 + React Router 7 (SPA mode) + TypeScript, styled with Tailwind CSS v4 and shadcn/ui (Radix).
+React 19 + React Router 8 (SPA mode) + TypeScript, styled with Tailwind CSS v4 and shadcn/ui (Radix).
 
 ## Setup
+
+Requires Node 22.22+ (Node 24 recommended).
 
 ```sh
 cp .env.example .env   # fill in values
