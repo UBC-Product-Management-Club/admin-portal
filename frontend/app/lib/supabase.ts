@@ -1,0 +1,13 @@
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+import { getEnv } from "~/lib/env";
+
+let client: SupabaseClient | undefined;
+
+export function getSupabase(): SupabaseClient {
+  if (!client) {
+    const env = getEnv();
+    client = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_PUBLIC_KEY);
+  }
+  return client;
+}
