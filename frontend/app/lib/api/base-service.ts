@@ -1,6 +1,8 @@
-import { RestClient } from "~/lib/api/rest-client";
+import { getApiClient, type ApiClient } from "~/lib/api/api-client";
 
-/** Feature services (users, events, reimbursements, budget) extend this. */
+/** Feature services extend this; it picks the real or mock client. */
 export abstract class BaseService {
-  protected readonly client = RestClient.getInstance();
+  protected client(): Promise<ApiClient> {
+    return getApiClient();
+  }
 }

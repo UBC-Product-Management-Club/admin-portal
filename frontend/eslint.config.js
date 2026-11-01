@@ -37,5 +37,10 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Generated shadcn/ui files export variant helpers alongside components.
+    files: ["app/components/ui/**"],
+    rules: { "react-refresh/only-export-components": "off" },
+  },
   prettier,
 );

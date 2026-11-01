@@ -1,5 +1,6 @@
 import type { z } from "zod";
 
+import type { ApiClient, RequestBody } from "~/lib/api/api-client";
 import { getEnv } from "~/lib/env";
 import { getSupabase } from "~/lib/supabase";
 import { apiErrorSchema } from "~/lib/types/api-error";
@@ -15,13 +16,11 @@ export class ApiError extends Error {
   }
 }
 
-type Body = Record<string, unknown> | FormData;
-
 /**
  * Single place for fetch + auth-header logic. Every response is parsed through
  * a Zod schema before it reaches a component, so backend shape drift fails loudly.
  */
-export class RestClient {
+export class RestClient implements ApiClient {
   private static instance: RestClient | undefined;
 
   static getInstance(): RestClient {
@@ -35,11 +34,11 @@ export class RestClient {
     return this.request("GET", path, schema);
   }
 
-  post<T extends z.ZodType>(path: string, schema: T, body?: Body) {
+  post<T extends z.ZodType>(path: string, schema: T, body?: RequestBody) {
     return this.request("POST", path, schema, body);
   }
 
-  patch<T extends z.ZodType>(path: string, schema: T, body?: Body) {
+  patch<T extends z.ZodType>(path: string, schema: T, body?: RequestBody) {
     return this.request("PATCH", path, schema, body);
   }
 
@@ -47,7 +46,7 @@ export class RestClient {
     method: string,
     path: string,
     schema: T,
-    body?: Body,
+    body?: RequestBody,
   ): Promise<z.output<T>> {
     const headers = new Headers(await this.authHeaders());
     let payload: BodyInit | undefined;

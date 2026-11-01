@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import {
   isRouteErrorResponse,
   Links,
@@ -32,7 +33,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 // Shown while route clientLoaders (e.g. the auth guard) resolve on first load.
 export function HydrateFallback() {
-  return null;
+  return (
+    <div
+      className="flex min-h-screen items-center justify-center"
+      role="status"
+    >
+      <Loader2
+        aria-hidden="true"
+        className="size-6 animate-spin text-primary"
+      />
+      <span className="sr-only">Loading</span>
+    </div>
+  );
 }
 
 export default function App() {
