@@ -5,7 +5,7 @@ Internal web tool PMC execs use to manage members, events and finances.
 ## Structure
 
 - `frontend/` — React Router 8 SPA (see `frontend/README.md`)
-- `backend/` — notes on the PMC backend API the portal talks to
+- `backend/` — Express + TypeScript admin API (see `backend/README.md`)
 
 ## Architecture
 
