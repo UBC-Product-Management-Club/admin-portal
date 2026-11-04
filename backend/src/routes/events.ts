@@ -11,6 +11,9 @@ const applicantParamsSchema = z.object({
 });
 const eventParamsSchema = z.object({ eventId: z.guid() });
 const decisionSchema = z.object({ status: z.enum(["ACCEPTED", "REJECTED"]) });
+const paymentDueSchema = z.object({
+  payment_due_at: z.iso.datetime({ offset: true }),
+});
 
 export function createEventsRouter(
   events: EventStore,
@@ -63,6 +66,17 @@ export function createEventsRouter(
     }
     res.json(await applicants.decide(eventId, attendeeId, status, reviewer));
   });
+
+  router.patch(
+    "/:eventId/applicants/:attendeeId/payment-due",
+    async (req, res) => {
+      const { eventId, attendeeId } = applicantParamsSchema.parse(req.params);
+      const { payment_due_at } = paymentDueSchema.parse(req.body);
+      res.json(
+        await applicants.setPaymentDue(eventId, attendeeId, payment_due_at),
+      );
+    },
+  );
 
   return router;
 }

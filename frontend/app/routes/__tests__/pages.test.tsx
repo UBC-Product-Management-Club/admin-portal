@@ -113,18 +113,66 @@ describe("portal pages (mock data)", () => {
       "href",
       "https://example.com/resume.pdf",
     );
-    expect(screen.getByText("2 of 3 waiting for review")).toBeInTheDocument();
+    expect(screen.getByText("2 of 4 waiting for review")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Accept Maya Singh" }));
 
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Maya Singh"));
     expect(
-      await screen.findByText("1 of 3 waiting for review"),
+      await screen.findByText("1 of 4 waiting for review"),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Accept Maya Singh" }),
     ).not.toBeInTheDocument();
     confirm.mockRestore();
+  });
+
+  it("applicants can extend an accepted applicant's deadline", async () => {
+    const user = userEvent.setup();
+    renderPage("applicants", "/applicants", Applicants, applicantsLoader);
+
+    // Stored as 07:00 UTC, which is the evening before in Vancouver.
+    expect(
+      await screen.findByText(/Pay by Fri, Nov\.? 6.*11:00.*PST/),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Change payment deadline: Leo Park",
+      }),
+    );
+    const date = screen.getByLabelText("New payment deadline date");
+    await user.clear(date);
+    await user.type(date, "2099-01-10");
+    const time = screen.getByLabelText("New payment deadline time");
+    await user.clear(time);
+    await user.type(time, "20:00");
+    expect(screen.getByText(/In Vancouver: .*12:00.*PST/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save deadline" }));
+
+    expect(await screen.findByText(/Pay by .*Jan\.? 10/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Save deadline" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("applicants only offers deadlines for accepted applicants", async () => {
+    renderPage("applicants", "/applicants", Applicants, applicantsLoader);
+
+    await screen.findByRole("button", {
+      name: "Change payment deadline: Leo Park",
+    });
+    expect(
+      screen.queryByRole("button", {
+        name: "Change payment deadline: Ella Wong",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Change payment deadline: Noah Tran",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("applicants doesn't save when the reviewer cancels", async () => {

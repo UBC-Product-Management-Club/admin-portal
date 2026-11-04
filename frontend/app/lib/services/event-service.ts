@@ -51,6 +51,18 @@ class EventService extends BaseService {
     );
   }
 
+  async setPaymentDue(
+    eventId: string,
+    attendeeId: string,
+    paymentDueAt: string,
+  ) {
+    return (await this.client()).patch(
+      `${eventPath(eventId)}/applicants/${encodeURIComponent(attendeeId)}/payment-due`,
+      applicantSchema,
+      { payment_due_at: paymentDueAt },
+    );
+  }
+
   /** Multipart so the optional thumbnail travels with the event. */
   async createEvent(form: FormData) {
     return (await this.client()).post("/events/add", eventSchema, form);

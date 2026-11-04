@@ -22,6 +22,16 @@ const timeFormat = new Intl.DateTimeFormat("en-CA", {
   hour: "numeric",
   minute: "2-digit",
 });
+// Deadlines are promised to members in local time, so show it alongside UTC.
+const vancouverFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Vancouver",
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZoneName: "short",
+});
 const currencyFormat = new Intl.NumberFormat("en-CA", {
   style: "currency",
   currency: "CAD",
@@ -35,6 +45,8 @@ export const formatShortDate = (iso: string) =>
 export const formatMonthYear = (iso: string) =>
   monthYearFormat.format(new Date(iso));
 export const formatTime = (iso: string) => timeFormat.format(new Date(iso));
+export const formatVancouverTime = (iso: string) =>
+  vancouverFormat.format(new Date(iso));
 export const formatCurrency = (amount: number) => currencyFormat.format(amount);
 
 export function monthAbbreviation(iso: string) {

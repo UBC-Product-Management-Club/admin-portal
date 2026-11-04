@@ -33,6 +33,7 @@ const applicants = {
   listReviewEvents: vi.fn(),
   listApplicants: vi.fn(),
   decide: vi.fn(),
+  setPaymentDue: vi.fn(),
 } satisfies ApplicantStore;
 
 const EVENT_ID = "28ee870f-b0e1-45a8-a49d-d137a2700166";
@@ -209,6 +210,41 @@ describe("admin API", () => {
           .expect(400);
         expect(res.body.error.code).toBe("VALIDATION_ERROR");
         expect(applicants.decide).not.toHaveBeenCalled();
+      },
+    );
+
+    it("changes a payment deadline", async () => {
+      const dueAt = "2099-01-01T08:00:00.000Z";
+      applicants.setPaymentDue.mockResolvedValue({ payment_due_at: dueAt });
+      await asExec(request(app).patch(`${APPLICANT_PATH}/payment-due`))
+        .send({ payment_due_at: dueAt })
+        .expect(200, { payment_due_at: dueAt });
+      expect(applicants.setPaymentDue).toHaveBeenCalledWith(
+        EVENT_ID,
+        ATTENDEE_ID,
+        dueAt,
+      );
+    });
+
+    it("keeps payment deadlines behind admin auth", async () => {
+      const path = `${APPLICANT_PATH}/payment-due`;
+      const body = { payment_due_at: "2099-01-01T08:00:00.000Z" };
+      await request(app).patch(path).send(body).expect(401);
+      await request(app)
+        .patch(path)
+        .set("Authorization", "Bearer outsider-token")
+        .send(body)
+        .expect(403);
+      expect(applicants.setPaymentDue).not.toHaveBeenCalled();
+    });
+
+    it.each(["next friday", "2099-01-01", null, undefined])(
+      "rejects %s as a payment deadline",
+      async (paymentDueAt) => {
+        await asExec(request(app).patch(`${APPLICANT_PATH}/payment-due`))
+          .send({ payment_due_at: paymentDueAt })
+          .expect(400);
+        expect(applicants.setPaymentDue).not.toHaveBeenCalled();
       },
     );
 

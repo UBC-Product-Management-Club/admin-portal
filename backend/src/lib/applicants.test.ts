@@ -23,6 +23,7 @@ function attendee(status: string) {
     created_at: "2026-11-02T10:00:00+00:00",
     reviewed_by: null,
     reviewed_at: null,
+    payment_due_at: null as string | null,
     event_form_answers: {
       name: "Form Name",
       email: "form@example.ca",
@@ -35,14 +36,25 @@ function attendee(status: string) {
 }
 
 /** Each Attendee read pops the next row, so tests can script before and after. */
-function fakeDb(attendeeReads: unknown[], rpcError: unknown = null) {
+function fakeDb(
+  attendeeReads: unknown[],
+  rpcError: unknown = null,
+  updatedRows: unknown[] = [],
+) {
   const rpc = vi.fn(async () => ({ error: rpcError }));
   const createSignedUrls = vi.fn(async (paths: string[]) => ({
     data: paths.map((path) => ({ path, signedUrl: `https://signed/${path}` })),
     error: null,
   }));
+  const updates: unknown[] = [];
   const from = (table: string) => {
+    let isUpdate = false;
     const query = {
+      update: (values: unknown) => {
+        isUpdate = true;
+        updates.push(values);
+        return query;
+      },
       select: () => query,
       eq: () => query,
       in: () => query,
@@ -52,7 +64,7 @@ function fakeDb(attendeeReads: unknown[], rpcError: unknown = null) {
         error: null,
       }),
       then: (resolve: (value: unknown) => void) =>
-        resolve({ data: attendeeReads, error: null }),
+        resolve({ data: isUpdate ? updatedRows : attendeeReads, error: null }),
     };
     return query;
   };
@@ -61,7 +73,7 @@ function fakeDb(attendeeReads: unknown[], rpcError: unknown = null) {
     rpc,
     storage: { from: () => ({ createSignedUrls }) },
   } as unknown as SupabaseClient;
-  return { db, rpc, createSignedUrls };
+  return { db, rpc, createSignedUrls, updates };
 }
 
 describe("createApplicantStore", () => {
@@ -154,5 +166,55 @@ describe("createApplicantStore", () => {
     await expect(
       createApplicantStore(db, "bucket").decide("e1", "a1", "ACCEPTED", "me"),
     ).rejects.toMatchObject({ status: 409, message: "Event is full" });
+  });
+
+  describe("setPaymentDue", () => {
+    const FUTURE = "2099-01-01T08:00:00.000Z";
+
+    it("saves the new deadline and returns the updated applicant", async () => {
+      const updatedRow = { ...attendee("ACCEPTED"), payment_due_at: FUTURE };
+      const { db, updates } = fakeDb([attendee("ACCEPTED"), updatedRow], null, [
+        { attendee_id: "a1" },
+      ]);
+
+      const result = await createApplicantStore(db, "bucket").setPaymentDue(
+        "e1",
+        "a1",
+        FUTURE,
+      );
+
+      expect(updates).toEqual([{ payment_due_at: FUTURE }]);
+      expect(result.payment_due_at).toBe(FUTURE);
+    });
+
+    it("refuses a deadline in the past without saving", async () => {
+      const { db, updates } = fakeDb([attendee("ACCEPTED")]);
+
+      await expect(
+        createApplicantStore(db, "bucket").setPaymentDue(
+          "e1",
+          "a1",
+          "2020-01-01T00:00:00.000Z",
+        ),
+      ).rejects.toMatchObject({ status: 400 });
+      expect(updates).toEqual([]);
+    });
+
+    it("refuses anyone who isn't accepted and waiting to pay", async () => {
+      const { db } = fakeDb([attendee("REGISTERED")], null, []);
+
+      await expect(
+        createApplicantStore(db, "bucket").setPaymentDue("e1", "a1", FUTURE),
+      ).rejects.toMatchObject({ status: 409, code: "NOT_AWAITING_PAYMENT" });
+    });
+
+    it("returns 404 for an applicant outside this event", async () => {
+      const { db, updates } = fakeDb([]);
+
+      await expect(
+        createApplicantStore(db, "bucket").setPaymentDue("e1", "a1", FUTURE),
+      ).rejects.toMatchObject({ status: 404 });
+      expect(updates).toEqual([]);
+    });
   });
 });

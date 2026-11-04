@@ -74,6 +74,29 @@ export class MockClient implements ApiClient {
         return applicant;
       },
     ),
+    this.route(
+      "PATCH",
+      "/events/:eventId/applicants/:attendeeId/payment-due",
+      ({ eventId, attendeeId }, body) => {
+        this.findReviewEvent(eventId);
+        const applicant = this.applicants.find(
+          (a) => a.attendee_id === attendeeId,
+        );
+        if (!applicant) {
+          throw new ApiError(404, "NOT_FOUND", "Applicant not found");
+        }
+        if (applicant.status !== "ACCEPTED") {
+          throw new ApiError(
+            409,
+            "NOT_AWAITING_PAYMENT",
+            "Only accepted applicants who haven't paid have a payment deadline",
+          );
+        }
+        const { payment_due_at } = body as { payment_due_at: string };
+        applicant.payment_due_at = payment_due_at;
+        return applicant;
+      },
+    ),
     this.route("POST", "/events/add", (_params, body) =>
       this.createEvent(asFormData(body)),
     ),

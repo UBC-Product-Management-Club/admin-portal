@@ -1,7 +1,8 @@
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fragment, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router";
 
+import { DateTimeField } from "~/components/date-time-field";
 import { PageHeader } from "~/components/page-header";
 import { RouteError } from "~/components/route-error";
 import { SearchField } from "~/components/search-field";
@@ -24,7 +25,12 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { ApiError } from "~/lib/api/rest-client";
-import { formatDate, formatMonthYear } from "~/lib/format";
+import {
+  fromDateTimeParts,
+  toDateTimeParts,
+  type DateTimeParts,
+} from "~/lib/date-parts";
+import { formatDate, formatMonthYear, formatVancouverTime } from "~/lib/format";
 import { eventService } from "~/lib/services/event-service";
 import type {
   Applicant,
@@ -119,6 +125,7 @@ function ApplicantTable({
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>(ALL_STATUSES);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingDueId, setEditingDueId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -129,6 +136,12 @@ function ApplicantTable({
       [a.name, a.email].some((value) => value.toLowerCase().includes(needle)),
     );
   const waitingCount = applicants.filter((a) => a.status === "APPLIED").length;
+
+  function replaceApplicant(updated: Applicant) {
+    setApplicants((current) =>
+      current.map((a) => (a.attendeeId === updated.attendeeId ? updated : a)),
+    );
+  }
 
   async function decide(applicant: Applicant, decision: ApplicantDecision) {
     const verb = decision === "ACCEPTED" ? "Accept" : "Reject";
@@ -145,9 +158,7 @@ function ApplicantTable({
         applicant.attendeeId,
         decision,
       );
-      setApplicants((current) =>
-        current.map((a) => (a.attendeeId === updated.attendeeId ? updated : a)),
-      );
+      replaceApplicant(updated);
     } catch (e) {
       setError(
         e instanceof ApiError
@@ -275,14 +286,42 @@ function ApplicantTable({
                             </Button>
                           </div>
                         ) : (
-                          <span className="text-[13px] text-muted-foreground">
-                            {applicant.reviewedBy
-                              ? `By ${applicant.reviewedBy}`
-                              : "Reviewed"}
-                          </span>
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="text-[13px] text-muted-foreground">
+                              {applicant.reviewedBy
+                                ? `By ${applicant.reviewedBy}`
+                                : "Reviewed"}
+                            </span>
+                            {applicant.status === "ACCEPTED" && (
+                              <PaymentDue
+                                applicant={applicant}
+                                onChange={() =>
+                                  setEditingDueId(applicant.attendeeId)
+                                }
+                              />
+                            )}
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
+                    {editingDueId === applicant.attendeeId && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={COLUMN_COUNT}
+                          className="bg-sidebar px-4 py-4 whitespace-normal"
+                        >
+                          <PaymentDueForm
+                            eventId={eventId}
+                            applicant={applicant}
+                            onCancel={() => setEditingDueId(null)}
+                            onSaved={(updated) => {
+                              replaceApplicant(updated);
+                              setEditingDueId(null);
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
                     {isExpanded && (
                       <TableRow>
                         <TableCell
@@ -301,6 +340,118 @@ function ApplicantTable({
         </Table>
       </div>
     </>
+  );
+}
+
+function PaymentDue({
+  applicant,
+  onChange,
+}: {
+  applicant: Applicant;
+  onChange: () => void;
+}) {
+  const { paymentDueAt } = applicant;
+  const isOverdue =
+    paymentDueAt !== null && new Date(paymentDueAt) < new Date();
+  return (
+    <>
+      {paymentDueAt && (
+        <span className="text-[13px]">
+          Pay by {formatVancouverTime(paymentDueAt)}
+          {isOverdue && (
+            <span className="ml-1.5">
+              <StatusChip tone="warning">Overdue</StatusChip>
+            </span>
+          )}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={onChange}
+        aria-label={`Change payment deadline: ${applicant.name}`}
+        className="text-[13px] font-medium text-primary hover:underline"
+      >
+        Change deadline
+      </button>
+    </>
+  );
+}
+
+function PaymentDueForm({
+  eventId,
+  applicant,
+  onCancel,
+  onSaved,
+}: {
+  eventId: string;
+  applicant: Applicant;
+  onCancel: () => void;
+  onSaved: (updated: Applicant) => void;
+}) {
+  const [parts, setParts] = useState<DateTimeParts>(
+    toDateTimeParts(applicant.paymentDueAt),
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dueAt = fromDateTimeParts(parts);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!dueAt) {
+      setError("Enter a real date and time.");
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      onSaved(
+        await eventService.setPaymentDue(eventId, applicant.attendeeId, dueAt),
+      );
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Couldn't save the deadline.",
+      );
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex max-w-[420px] flex-col gap-3"
+      aria-label={`Payment deadline for ${applicant.name}`}
+    >
+      <DateTimeField
+        legend="New payment deadline"
+        required
+        value={parts}
+        onChange={setParts}
+      />
+      {dueAt && (
+        <p className="text-[13px] text-muted-foreground">
+          In Vancouver: {formatVancouverTime(dueAt)}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-[13px] text-destructive">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={isSaving}>
+          {isSaving ? "Saving…" : "Save deadline"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={isSaving}
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }
 

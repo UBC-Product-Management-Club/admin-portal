@@ -424,6 +424,7 @@ export const mockApplicants: z.input<typeof applicantSchema>[] = [
     created_at: "2026-11-03T18:00:00Z",
     reviewed_by: null,
     reviewed_at: null,
+    payment_due_at: null,
     answers: mockAnswers("I want to practise product thinking with a team."),
   },
   {
@@ -434,6 +435,7 @@ export const mockApplicants: z.input<typeof applicantSchema>[] = [
     created_at: "2026-11-03T19:30:00Z",
     reviewed_by: null,
     reviewed_at: null,
+    payment_due_at: null,
     answers: mockAnswers("I loved the last case competition."),
   },
   {
@@ -444,6 +446,18 @@ export const mockApplicants: z.input<typeof applicantSchema>[] = [
     created_at: "2026-11-03T20:15:00Z",
     reviewed_by: "dev.exec@example.ca",
     reviewed_at: "2026-11-04T01:00:00Z",
+    payment_due_at: null,
     answers: mockAnswers("I'm curious about product management."),
+  },
+  {
+    attendee_id: "app-04",
+    name: "Leo Park",
+    email: "leo.park@example.ca",
+    status: "ACCEPTED",
+    created_at: "2026-11-03T21:00:00Z",
+    reviewed_by: "dev.exec@example.ca",
+    reviewed_at: "2026-11-04T02:00:00Z",
+    payment_due_at: "2026-11-07T07:00:00Z",
+    answers: mockAnswers("I want to get better at case interviews."),
   },
 ];

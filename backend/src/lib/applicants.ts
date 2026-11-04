@@ -20,6 +20,7 @@ export type Applicant = {
   created_at: string;
   reviewed_by: string | null;
   reviewed_at: string | null;
+  payment_due_at: string | null;
   answers: ApplicantAnswer[];
 };
 
@@ -41,6 +42,11 @@ export type ApplicantStore = {
     decision: ApplicantDecision,
     reviewer: string,
   ): Promise<Applicant>;
+  setPaymentDue(
+    eventId: string,
+    attendeeId: string,
+    paymentDueAt: string,
+  ): Promise<Applicant>;
 };
 
 const REVIEWABLE_STATUSES = ["APPLIED", "ACCEPTED", "REJECTED", "REGISTERED"];
@@ -51,7 +57,7 @@ const RAISED_BY_FUNCTION = "P0001";
 const REVIEW_EVENT_COLUMNS =
   "event_id,name,registration_opens,registration_closes";
 const ATTENDEE_COLUMNS =
-  "attendee_id,status,created_at,reviewed_by,reviewed_at,event_form_answers,User(first_name,last_name,email)";
+  "attendee_id,status,created_at,reviewed_by,reviewed_at,payment_due_at,event_form_answers,User(first_name,last_name,email)";
 
 const reviewEventSchema = z.object({
   event_id: z.string(),
@@ -72,6 +78,7 @@ const attendeeSchema = z.object({
   created_at: z.string(),
   reviewed_by: z.string().nullable(),
   reviewed_at: z.string().nullable(),
+  payment_due_at: z.string().nullable(),
   event_form_answers: z.record(z.string(), z.unknown()).nullable(),
   User: z.object({
     first_name: z.string(),
@@ -204,6 +211,39 @@ export function createApplicantStore(
       const signedUrls = await signFiles([updated], questions);
       return toApplicant(updated, questions, signedUrls);
     },
+
+    async setPaymentDue(eventId, attendeeId, paymentDueAt) {
+      if (new Date(paymentDueAt) <= new Date()) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "The new deadline must be in the future",
+        );
+      }
+
+      const { questions } = await getQuestions(eventId);
+      await getAttendee(eventId, attendeeId);
+      // The status filter stops a late change landing on someone who just paid.
+      const { data, error } = await db
+        .from("Attendee")
+        .update({ payment_due_at: paymentDueAt })
+        .eq("event_id", eventId)
+        .eq("attendee_id", attendeeId)
+        .eq("status", "ACCEPTED")
+        .select("attendee_id");
+      if (error) throw error;
+      if (data.length === 0) {
+        throw new HttpError(
+          409,
+          "NOT_AWAITING_PAYMENT",
+          "Only accepted applicants who haven't paid have a payment deadline",
+        );
+      }
+
+      const updated = await getAttendee(eventId, attendeeId);
+      const signedUrls = await signFiles([updated], questions);
+      return toApplicant(updated, questions, signedUrls);
+    },
   };
 }
 
@@ -227,6 +267,7 @@ function toApplicant(
     created_at: row.created_at,
     reviewed_by: row.reviewed_by,
     reviewed_at: row.reviewed_at,
+    payment_due_at: row.payment_due_at,
     answers: [...questions, ...unlisted].map(({ id, label, type }) => {
       const answer = answers[id];
       return {

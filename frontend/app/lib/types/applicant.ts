@@ -33,6 +33,7 @@ export const applicantSchema = z
     created_at: z.string(),
     reviewed_by: z.string().nullable(),
     reviewed_at: z.string().nullable(),
+    payment_due_at: z.string().nullable(),
     answers: z.array(
       z.object({
         id: z.string(),
@@ -50,6 +51,7 @@ export const applicantSchema = z
     appliedAt: applicant.created_at,
     reviewedBy: applicant.reviewed_by,
     reviewedAt: applicant.reviewed_at,
+    paymentDueAt: applicant.payment_due_at,
     answers: applicant.answers,
   }));
 
