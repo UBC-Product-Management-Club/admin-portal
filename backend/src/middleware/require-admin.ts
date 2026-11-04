@@ -9,7 +9,7 @@ declare module "express-serve-static-core" {
   }
 }
 
-/** Every admin endpoint requires a valid Supabase JWT from a PMC email. */
+/** Every admin endpoint requires a valid Supabase JWT from a confirmed PMC email. */
 export function requireAdmin(
   verifyToken: VerifyToken,
   adminEmailDomains: string[],
@@ -32,6 +32,15 @@ export function requireAdmin(
         403,
         "FORBIDDEN",
         "Admin access requires a PMC email",
+      );
+    }
+
+    // Without this, anyone could sign up with an unverified PMC address.
+    if (!user.emailConfirmed) {
+      throw new HttpError(
+        403,
+        "FORBIDDEN",
+        "Admin access requires a confirmed email",
       );
     }
 

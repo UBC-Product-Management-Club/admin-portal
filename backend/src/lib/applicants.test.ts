@@ -1,0 +1,158 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { createApplicantStore } from "./applicants.js";
+
+const EVENT = {
+  event_id: "e1",
+  name: "Product Jackpot",
+  registration_opens: "2026-11-02T08:00:00+00:00",
+  registration_closes: "2026-11-16T08:00:00+00:00",
+  event_form_questions: {
+    questions: [
+      { id: "why_pm", type: "long-answer", label: "Why PM?" },
+      { id: "resume", type: "file", label: "Resume (PDF)" },
+    ],
+  },
+};
+
+function attendee(status: string) {
+  return {
+    attendee_id: "a1",
+    status,
+    created_at: "2026-11-02T10:00:00+00:00",
+    reviewed_by: null,
+    reviewed_at: null,
+    event_form_answers: {
+      name: "Form Name",
+      email: "form@example.ca",
+      why_pm: "I like products",
+      resume: "folder/resume.pdf",
+      extra: "Not in the question list",
+    },
+    User: { first_name: "Acct", last_name: "Name", email: "acct@example.ca" },
+  };
+}
+
+/** Each Attendee read pops the next row, so tests can script before and after. */
+function fakeDb(attendeeReads: unknown[], rpcError: unknown = null) {
+  const rpc = vi.fn(async () => ({ error: rpcError }));
+  const createSignedUrls = vi.fn(async (paths: string[]) => ({
+    data: paths.map((path) => ({ path, signedUrl: `https://signed/${path}` })),
+    error: null,
+  }));
+  const from = (table: string) => {
+    const query = {
+      select: () => query,
+      eq: () => query,
+      in: () => query,
+      order: () => query,
+      maybeSingle: async () => ({
+        data: table === "Event" ? EVENT : (attendeeReads.shift() ?? null),
+        error: null,
+      }),
+      then: (resolve: (value: unknown) => void) =>
+        resolve({ data: attendeeReads, error: null }),
+    };
+    return query;
+  };
+  const db = {
+    from,
+    rpc,
+    storage: { from: () => ({ createSignedUrls }) },
+  } as unknown as SupabaseClient;
+  return { db, rpc, createSignedUrls };
+}
+
+describe("createApplicantStore", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("lists applicants with their answers and signed resume links", async () => {
+    const { db, createSignedUrls } = fakeDb([attendee("APPLIED")]);
+
+    const list = await createApplicantStore(db, "bucket").listApplicants("e1");
+
+    expect(createSignedUrls).toHaveBeenCalledWith(["folder/resume.pdf"], 3600);
+    expect(list.name).toBe("Product Jackpot");
+    expect(list.applicants[0]).toMatchObject({
+      name: "Form Name",
+      email: "form@example.ca",
+      answers: [
+        { id: "why_pm", label: "Why PM?", value: "I like products" },
+        { id: "resume", value: "https://signed/folder/resume.pdf" },
+        { id: "extra", value: "Not in the question list" },
+      ],
+    });
+  });
+
+  it("falls back to the account name and email", async () => {
+    const row = attendee("APPLIED");
+    row.event_form_answers = {} as typeof row.event_form_answers;
+    const { db } = fakeDb([row]);
+
+    const list = await createApplicantStore(db, "bucket").listApplicants("e1");
+
+    expect(list.applicants[0]).toMatchObject({
+      name: "Acct Name",
+      email: "acct@example.ca",
+    });
+  });
+
+  it.each([
+    ["ACCEPTED", "accept_applicants"],
+    ["REJECTED", "reject_applicants"],
+  ] as const)("applies %s through %s", async (decision, fn) => {
+    const { db, rpc } = fakeDb([attendee("APPLIED"), attendee(decision)]);
+
+    const result = await createApplicantStore(db, "bucket").decide(
+      "e1",
+      "a1",
+      decision,
+      "exec@ubcpmc.com",
+    );
+
+    expect(rpc).toHaveBeenCalledWith(fn, {
+      p_event_id: "e1",
+      p_attendee_ids: ["a1"],
+      p_reviewer: "exec@ubcpmc.com",
+    });
+    expect(result.status).toBe(decision);
+  });
+
+  it("won't change an applicant who was already reviewed", async () => {
+    const { db, rpc } = fakeDb([attendee("REJECTED")]);
+
+    await expect(
+      createApplicantStore(db, "bucket").decide("e1", "a1", "ACCEPTED", "me"),
+    ).rejects.toMatchObject({ status: 409, code: "ALREADY_DECIDED" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 for an applicant outside this event", async () => {
+    const { db, rpc } = fakeDb([]);
+
+    await expect(
+      createApplicantStore(db, "bucket").decide("e1", "a1", "ACCEPTED", "me"),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("reports failure when the status didn't actually change", async () => {
+    const { db } = fakeDb([attendee("APPLIED"), attendee("APPLIED")]);
+
+    await expect(
+      createApplicantStore(db, "bucket").decide("e1", "a1", "ACCEPTED", "me"),
+    ).rejects.toMatchObject({ status: 409, code: "DECISION_NOT_APPLIED" });
+  });
+
+  it("passes on a refusal raised by the database function", async () => {
+    const { db } = fakeDb([attendee("APPLIED")], {
+      code: "P0001",
+      message: "Event is full",
+    });
+
+    await expect(
+      createApplicantStore(db, "bucket").decide("e1", "a1", "ACCEPTED", "me"),
+    ).rejects.toMatchObject({ status: 409, message: "Event is full" });
+  });
+});

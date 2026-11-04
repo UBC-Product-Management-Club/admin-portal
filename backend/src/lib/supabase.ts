@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import type { Env } from "../env.js";
 
-export type AuthUser = { id: string; email: string };
+export type AuthUser = { id: string; email: string; emailConfirmed: boolean };
 
 export type VerifyToken = (token: string) => Promise<AuthUser | null>;
 
@@ -14,7 +14,11 @@ export function createTokenVerifier(env: Env): VerifyToken {
   return async (token) => {
     const { data, error } = await client.auth.getUser(token);
     if (error || !data.user?.email) return null;
-    return { id: data.user.id, email: data.user.email };
+    return {
+      id: data.user.id,
+      email: data.user.email,
+      emailConfirmed: Boolean(data.user.email_confirmed_at),
+    };
   };
 }
 
