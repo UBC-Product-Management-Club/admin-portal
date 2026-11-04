@@ -52,7 +52,7 @@ jobs:
             --region "$REGION" \
             --image "$REGISTRY/$APP_NAME-api:$GITHUB_SHA" \
             --allow-unauthenticated \
-            --update-env-vars "^|^ORIGIN=http://localhost:5173|SUPABASE_URL=$SUPABASE_URL|SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY|ADMIN_EMAIL_DOMAINS=ubcpmc.com" \
+            --update-env-vars "^|^ORIGIN=http://localhost:5173|ADMIN_PORTAL_ORIGIN=https://admin.ubcpmc.com|SUPABASE_URL=$SUPABASE_URL|SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY|ADMIN_EMAIL_DOMAINS=ubcpmc.com" \
             --update-secrets "SUPABASE_SERVICE_ROLE_KEY=admin-portal-supabase-service-role-key:latest"
           url=$(gcloud run services describe "$APP_NAME-api" \
             --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')
@@ -71,7 +71,6 @@ jobs:
             --substitutions "^|^_IMAGE=$REGISTRY/$APP_NAME:$GITHUB_SHA|_VITE_API_URL=$API_URL|_VITE_SUPABASE_URL=$SUPABASE_URL|_VITE_SUPABASE_PUBLIC_KEY=$SUPABASE_ANON_KEY"
 
       - name: Deploy frontend
-        id: frontend
         run: |
           gcloud run deploy "$APP_NAME" \
             --project "$PROJECT_ID" \
@@ -79,18 +78,6 @@ jobs:
             --image "$REGISTRY/$APP_NAME:$GITHUB_SHA" \
             --port 8080 \
             --allow-unauthenticated
-          url=$(gcloud run services describe "$APP_NAME" \
-            --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-
-      - name: Allow the portal through the backend's CORS check
-        env:
-          PORTAL_URL: ${{ steps.frontend.outputs.url }}
-        run: |
-          gcloud run services update "$APP_NAME-api" \
-            --project "$PROJECT_ID" \
-            --region "$REGION" \
-            --update-env-vars "ADMIN_PORTAL_ORIGIN=$PORTAL_URL"
 
       - name: Check the backend is up
         env:
