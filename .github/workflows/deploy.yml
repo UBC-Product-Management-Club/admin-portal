@@ -1,0 +1,98 @@
+name: Deploy
+
+# Deploys main to Cloud Run once CI has passed, or on demand from the Actions tab.
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  REGION: us-west1
+  PROJECT_ID: ${{ secrets.PROJECT_ID }}
+  APP_NAME: ${{ secrets.APP_NAME }}
+  # Image tags are per commit, so a bad deploy can be rolled back in Cloud Run.
+  REGISTRY: us-west1-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ vars.ARTIFACT_REPOSITORY }}
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCLOUD_AUTH }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build backend image
+        run: |
+          gcloud builds submit backend \
+            --project "$PROJECT_ID" \
+            --tag "$REGISTRY/$APP_NAME-api:$GITHUB_SHA"
+
+      - name: Deploy backend
+        id: backend
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          # The API does its own auth on every admin route, so the service is public.
+          gcloud run deploy "$APP_NAME-api" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --image "$REGISTRY/$APP_NAME-api:$GITHUB_SHA" \
+            --allow-unauthenticated \
+            --update-env-vars "^|^ORIGIN=http://localhost:5173|SUPABASE_URL=$SUPABASE_URL|SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY|ADMIN_EMAIL_DOMAINS=ubcpmc.com" \
+            --update-secrets "SUPABASE_SERVICE_ROLE_KEY=admin-portal-supabase-service-role-key:latest"
+          url=$(gcloud run services describe "$APP_NAME-api" \
+            --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Build frontend image
+        env:
+          API_URL: ${{ steps.backend.outputs.url }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          # Vite inlines VITE_* at build time, so these go in through Cloud Build.
+          gcloud builds submit frontend \
+            --project "$PROJECT_ID" \
+            --config frontend/cloudbuild.yaml \
+            --substitutions "^|^_IMAGE=$REGISTRY/$APP_NAME:$GITHUB_SHA|_VITE_API_URL=$API_URL|_VITE_SUPABASE_URL=$SUPABASE_URL|_VITE_SUPABASE_PUBLIC_KEY=$SUPABASE_ANON_KEY"
+
+      - name: Deploy frontend
+        id: frontend
+        run: |
+          gcloud run deploy "$APP_NAME" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --image "$REGISTRY/$APP_NAME:$GITHUB_SHA" \
+            --port 8080 \
+            --allow-unauthenticated
+          url=$(gcloud run services describe "$APP_NAME" \
+            --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Allow the portal through the backend's CORS check
+        env:
+          PORTAL_URL: ${{ steps.frontend.outputs.url }}
+        run: |
+          gcloud run services update "$APP_NAME-api" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --update-env-vars "ADMIN_PORTAL_ORIGIN=$PORTAL_URL"
+
+      - name: Check the backend is up
+        env:
+          API_URL: ${{ steps.backend.outputs.url }}
+        run: curl --fail --silent --show-error --retry 5 --retry-delay 5 "$API_URL/health"
