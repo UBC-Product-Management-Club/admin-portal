@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Light mode only for now. Nothing sets .dark, so dark: utilities stay off. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   /* Apple system font stack (SF Pro on Apple devices), per the wireframe. */
   --font-sans:
@@ -45,6 +48,14 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-neutral: var(--neutral);
   --color-neutral-foreground: var(--neutral-foreground);
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
+  --color-divider: var(--divider);
+  --color-dropzone: var(--dropzone);
+  --color-dropzone-border: var(--dropzone-border);
+  --color-banner-from: var(--banner-from);
+  --color-banner-to: var(--banner-to);
+  --color-switch-off: var(--switch-off);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -54,8 +65,9 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Palette from the admin portal wireframe. Light only, as designed. */
+/* Palette from the admin portal wireframe. */
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #21202b;
   --card: #ffffff;
@@ -94,7 +106,71 @@
   --sidebar-accent-foreground: #4c1b82;
   --sidebar-border: #e4e4eb;
   --sidebar-ring: #7a3fc8;
+  --hover: #efeff6;
+  --selected: #f5f1fd;
+  --divider: #f0f0f4;
+  --dropzone: #faf8ff;
+  --dropzone-border: #c9c2e6;
+  --banner-from: #ebe3fc;
+  --banner-to: #e3e7fd;
+  --switch-off: #aeaeb2;
 }
+
+/* Dark mode, turned off for now. To restore it, uncomment this block and remove
+   the @custom-variant line at the top of this file.
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: #121118;
+    --foreground: #f2f1f7;
+    --card: #1c1b24;
+    --card-foreground: #f2f1f7;
+    --popover: #1c1b24;
+    --popover-foreground: #f2f1f7;
+    Lighter purple keeps links readable on dark; buttons use dark text on it.
+    --primary: #a57ef0;
+    --primary-foreground: #14111d;
+    --secondary: #2a2933;
+    --secondary-foreground: #f2f1f7;
+    --muted: #2a2933;
+    --muted-foreground: #a3a2ae;
+    --accent: #2f2447;
+    --accent-foreground: #d9c8fb;
+    --destructive: #ff6b66;
+    --border: #2e2d38;
+    --input: #3d3c49;
+    --ring: #a57ef0;
+    --success: #163a22;
+    --success-foreground: #7fd89a;
+    --warning: #3d2a12;
+    --warning-foreground: #f7b46d;
+    --neutral: #2a2933;
+    --neutral-foreground: #cfced8;
+    --chart-1: #a57ef0;
+    --chart-2: #8d9af2;
+    --chart-3: #ee6aa7;
+    --chart-4: #c9b4f2;
+    --chart-5: #d9c8fb;
+    --sidebar: #18171f;
+    --sidebar-foreground: #f2f1f7;
+    --sidebar-primary: #a57ef0;
+    --sidebar-primary-foreground: #14111d;
+    --sidebar-accent: #2f2447;
+    --sidebar-accent-foreground: #d9c8fb;
+    --sidebar-border: #2e2d38;
+    --sidebar-ring: #a57ef0;
+    --hover: #2e2d3a;
+    --selected: #33284d;
+    --divider: #2a2933;
+    --dropzone: #1e1a2a;
+    --dropzone-border: #4a3f66;
+    --banner-from: #2f2447;
+    --banner-to: #232845;
+    --switch-off: #48474f;
+  }
+}
+*/
 
 @layer base {
   * {

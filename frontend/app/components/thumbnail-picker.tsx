@@ -29,7 +29,7 @@ export function ThumbnailPicker({
         Thumbnail
       </label>
       <div className="flex items-center gap-4">
-        <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-br from-[#EBE3FC] to-[#E3E7FD]">
+        <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-br from-banner-from to-banner-to">
           {shownUrl ? (
             <img
               src={shownUrl}

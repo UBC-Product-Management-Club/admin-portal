@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  ClipboardCheck,
   LayoutGrid,
   LogOut,
   Receipt,
@@ -25,6 +26,7 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
     items: [
       { to: "/members", label: "Members", icon: Users },
       { to: "/events", label: "Events", icon: CalendarDays },
+      { to: "/applicants", label: "Applicants", icon: ClipboardCheck },
     ],
   },
   {
@@ -71,7 +73,7 @@ export function AppSidebar({ schoolYear }: { schoolYear: string }) {
                   to={to}
                   className={({ isActive }) =>
                     cn(
-                      "flex min-h-11 items-center gap-2.5 rounded-[10px] px-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-[#EFEFF6]",
+                      "flex min-h-11 items-center gap-2.5 rounded-[10px] px-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-hover",
                       isActive &&
                         "bg-sidebar-accent font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent",
                     )
@@ -105,7 +107,7 @@ export function AppSidebar({ schoolYear }: { schoolYear: string }) {
           type="button"
           aria-label="Log out"
           onClick={handleLogOut}
-          className="flex size-11 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-[#EFEFF6] hover:text-foreground"
+          className="flex size-11 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-hover hover:text-foreground"
         >
           <LogOut aria-hidden="true" className="size-[18px]" />
         </button>

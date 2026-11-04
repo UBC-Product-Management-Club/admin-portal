@@ -241,7 +241,7 @@ export default function CreateEvent() {
             {TRACK_OPTIONS.map((option) => (
               <div
                 key={option.track}
-                className="flex items-center gap-4 border-t border-[#F2F2F7] py-2.5"
+                className="flex items-center gap-4 border-t border-divider py-2.5"
               >
                 <div className="flex flex-1 flex-col gap-0.5">
                   <span className="text-sm font-medium">{option.label}</span>
@@ -346,7 +346,7 @@ function PortalPreview({
       <span className="text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
         Portal preview
       </span>
-      <div className="flex h-24 items-center justify-center overflow-hidden rounded-[10px] bg-[#EEEDFC] text-xs text-accent-foreground">
+      <div className="flex h-24 items-center justify-center overflow-hidden rounded-[10px] bg-banner-from text-xs text-accent-foreground">
         {thumbnailUrl ? (
           <img src={thumbnailUrl} alt="" className="size-full object-cover" />
         ) : (

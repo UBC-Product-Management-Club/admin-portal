@@ -20,6 +20,7 @@ export default [
       "events/:eventId/applicants",
       "routes/events.$eventId.applicants.tsx",
     ),
+    route("applicants", "routes/applicants.tsx"),
     route("emails", "routes/emails.tsx"),
     route("reimbursements", "routes/reimbursements.tsx"),
     route("budget", "routes/budget.tsx"),

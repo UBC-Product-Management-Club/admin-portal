@@ -1,4 +1,10 @@
 import { BaseService } from "~/lib/api/base-service";
+import {
+  applicantListSchema,
+  applicantSchema,
+  reviewEventListSchema,
+  type ApplicantDecision,
+} from "~/lib/types/applicant";
 import { attendeeListSchema } from "~/lib/types/attendee";
 import {
   basicEventListSchema,
@@ -19,6 +25,29 @@ class EventService extends BaseService {
     return (await this.client()).get(
       `${eventPath(eventId)}/attendees`,
       attendeeListSchema,
+    );
+  }
+
+  async listReviewEvents() {
+    return (await this.client()).get("/events/review", reviewEventListSchema);
+  }
+
+  async listApplicants(eventId: string) {
+    return (await this.client()).get(
+      `${eventPath(eventId)}/applicants`,
+      applicantListSchema,
+    );
+  }
+
+  async decideApplicant(
+    eventId: string,
+    attendeeId: string,
+    status: ApplicantDecision,
+  ) {
+    return (await this.client()).patch(
+      `${eventPath(eventId)}/applicants/${encodeURIComponent(attendeeId)}`,
+      applicantSchema,
+      { status },
     );
   }
 

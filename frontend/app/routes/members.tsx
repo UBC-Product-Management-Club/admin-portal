@@ -250,7 +250,9 @@ export default function Members({ loaderData }: Route.ComponentProps) {
                   return (
                     <TableRow
                       key={row.id}
-                      className={cn(isSelected && "bg-[#F5F1FD]")}
+                      className={cn(
+                        isSelected && "bg-selected hover:bg-selected",
+                      )}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id} className="px-4 py-3">

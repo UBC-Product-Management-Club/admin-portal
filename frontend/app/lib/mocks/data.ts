@@ -1,5 +1,6 @@
 import type { z } from "zod";
 
+import type { applicantSchema, reviewEventSchema } from "~/lib/types/applicant";
 import type { attendeeSchema } from "~/lib/types/attendee";
 import type { eventSchema } from "~/lib/types/event";
 import type { reimbursementSchema } from "~/lib/types/reimbursement";
@@ -387,5 +388,62 @@ export const mockReimbursements: RawReimbursement[] = [
     notes: null,
     status: "rejected",
     created_at: "2026-09-02T15:00:00Z",
+  },
+];
+
+export const MOCK_REVIEW_EVENT: z.input<typeof reviewEventSchema> = {
+  event_id: "evt-review",
+  name: "Product Jackpot",
+  registration_opens: "2026-11-02T08:00:00Z",
+  registration_closes: "2026-11-16T08:00:00Z",
+};
+
+function mockAnswers(whyEvent: string) {
+  return [
+    {
+      id: "why_event",
+      label: "Why are you interested in participating?",
+      type: "long-answer",
+      value: whyEvent,
+    },
+    {
+      id: "resume",
+      label: "Resume (PDF)",
+      type: "file",
+      value: "https://example.com/resume.pdf",
+    },
+  ];
+}
+
+export const mockApplicants: z.input<typeof applicantSchema>[] = [
+  {
+    attendee_id: "app-01",
+    name: "Maya Singh",
+    email: "maya.singh@example.ca",
+    status: "APPLIED",
+    created_at: "2026-11-03T18:00:00Z",
+    reviewed_by: null,
+    reviewed_at: null,
+    answers: mockAnswers("I want to practise product thinking with a team."),
+  },
+  {
+    attendee_id: "app-02",
+    name: "Noah Tran",
+    email: "noah.tran@example.ca",
+    status: "APPLIED",
+    created_at: "2026-11-03T19:30:00Z",
+    reviewed_by: null,
+    reviewed_at: null,
+    answers: mockAnswers("I loved the last case competition."),
+  },
+  {
+    attendee_id: "app-03",
+    name: "Ella Wong",
+    email: "ella.wong@example.ca",
+    status: "REJECTED",
+    created_at: "2026-11-03T20:15:00Z",
+    reviewed_by: "dev.exec@example.ca",
+    reviewed_at: "2026-11-04T01:00:00Z",
+    answers: mockAnswers("I'm curious about product management."),
   },
 ];

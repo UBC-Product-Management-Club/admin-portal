@@ -131,7 +131,7 @@ export default function Reimbursements({ loaderData }: Route.ComponentProps) {
                 return (
                   <li
                     key={request.id}
-                    className="flex items-center gap-3 border-t border-[#F0F0F4] py-3"
+                    className="flex items-center gap-3 border-t border-divider py-3"
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className="text-sm font-semibold">
@@ -296,7 +296,7 @@ function NewRequestForm({
         >
           Receipt
         </label>
-        <div className="flex flex-col items-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-[#C9C2E6] bg-[#FAF8FF] p-5 text-center text-sm font-semibold text-accent-foreground">
+        <div className="flex flex-col items-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-dropzone-border bg-dropzone p-5 text-center text-sm font-semibold text-accent-foreground">
           <Upload aria-hidden="true" className="size-5" />
           Upload a photo or PDF of the receipt
           <input

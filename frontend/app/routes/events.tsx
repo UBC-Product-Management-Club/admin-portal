@@ -136,11 +136,11 @@ function EventCard({ event, isPast }: { event: BasicEvent; isPast: boolean }) {
   return (
     <Link
       to={`/events/${event.eventId}`}
-      className="card-surface flex flex-col overflow-hidden transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(0,0,0,0.03),0_18px_36px_-16px_rgba(76,29,149,0.24)]"
+      className="card-surface flex flex-col overflow-hidden transition-[transform,box-shadow,border-color] hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_1px_2px_rgba(0,0,0,0.03),0_18px_36px_-16px_rgba(76,29,149,0.24)]"
     >
       <span
         className={cn(
-          "relative flex h-32 items-center justify-center bg-gradient-to-br from-[#EBE3FC] to-[#E3E7FD]",
+          "relative flex h-32 items-center justify-center bg-gradient-to-br from-banner-from to-banner-to",
           isPast && "opacity-70",
         )}
       >
@@ -169,7 +169,7 @@ function EventCard({ event, isPast }: { event: BasicEvent; isPast: boolean }) {
           {formatDate(event.startTime)}
           {isPast && " · Ended"} · {event.location}
         </span>
-        <span className="mt-auto flex justify-between border-t border-[#F0F0F4] pt-2.5 text-[13px] text-muted-foreground">
+        <span className="mt-auto flex justify-between border-t border-divider pt-2.5 text-[13px] text-muted-foreground">
           <span>
             {isPast
               ? `${event.attendedCount} attended`

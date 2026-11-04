@@ -3,6 +3,9 @@ import userEvent from "@testing-library/user-event";
 import type { ComponentType } from "react";
 import { createRoutesStub, Outlet } from "react-router";
 
+import Applicants, {
+  clientLoader as applicantsLoader,
+} from "~/routes/applicants";
 import Dashboard, { clientLoader as dashboardLoader } from "~/routes/dashboard";
 import EventDetail, {
   clientLoader as eventDetailLoader,
@@ -85,6 +88,52 @@ describe("portal pages (mock data)", () => {
       screen.getByRole("heading", { name: "Liam Patel" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Showing 1–1 of 1 members/)).toBeInTheDocument();
+  });
+
+  it("applicants shows written answers and saves a decision", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderPage("applicants", "/applicants", Applicants, applicantsLoader);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Show application: Maya Singh",
+      }),
+    );
+    expect(
+      screen.getByText("I want to practise product thinking with a team."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open file" })).toHaveAttribute(
+      "href",
+      "https://example.com/resume.pdf",
+    );
+    expect(screen.getByText("2 of 3 waiting for review")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Accept Maya Singh" }));
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Maya Singh"));
+    expect(
+      await screen.findByText("1 of 3 waiting for review"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Accept Maya Singh" }),
+    ).not.toBeInTheDocument();
+    confirm.mockRestore();
+  });
+
+  it("applicants doesn't save when the reviewer cancels", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderPage("applicants", "/applicants", Applicants, applicantsLoader);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Reject Noah Tran" }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Reject Noah Tran" }),
+    ).toBeInTheDocument();
+    confirm.mockRestore();
   });
 
   it("events grid shows upcoming events for this school year", async () => {

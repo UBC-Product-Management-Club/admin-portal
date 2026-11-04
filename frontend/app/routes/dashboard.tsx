@@ -152,7 +152,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={membersByYear} margin={{ left: -24, right: 8 }}>
-                  <CartesianGrid vertical={false} stroke="#EFEFF4" />
+                  <CartesianGrid vertical={false} stroke="var(--border)" />
                   <XAxis
                     dataKey="label"
                     tickLine={false}
@@ -165,7 +165,15 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                     axisLine={false}
                     tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
                   />
-                  <Tooltip cursor={{ fill: "#F5F1FD" }} />
+                  <Tooltip
+                    cursor={{ fill: "var(--selected)" }}
+                    contentStyle={{
+                      background: "var(--popover)",
+                      borderColor: "var(--border)",
+                      borderRadius: 10,
+                      color: "var(--popover-foreground)",
+                    }}
+                  />
                   <Bar
                     dataKey="count"
                     name="Members"
@@ -285,7 +293,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
                   <li key={event.eventId}>
                     <Link
                       to={`/events/${event.eventId}`}
-                      className="flex items-center gap-4 rounded-xl px-2 py-1.5 transition-colors hover:bg-[#F4F4F8]"
+                      className="flex items-center gap-4 rounded-xl px-2 py-1.5 transition-colors hover:bg-hover"
                     >
                       <DateBadge iso={event.startTime} />
                       <span className="flex min-w-0 flex-1 flex-col">
@@ -337,7 +345,10 @@ function QuickAction({
   detail: string;
 }) {
   return (
-    <Link to={to} className="card-surface flex items-center gap-3 p-3.5">
+    <Link
+      to={to}
+      className="card-surface flex items-center gap-3 p-3.5 transition-colors hover:border-primary/40 hover:bg-hover"
+    >
       <span className="brand-gradient flex size-10 shrink-0 items-center justify-center rounded-xl text-white">
         {icon}
       </span>

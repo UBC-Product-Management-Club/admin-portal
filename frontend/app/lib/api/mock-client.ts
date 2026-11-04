@@ -4,6 +4,8 @@ import type { ApiClient, RequestBody } from "~/lib/api/api-client";
 import { ApiError } from "~/lib/api/rest-client";
 import {
   MOCK_CURRENT_USER_ID,
+  MOCK_REVIEW_EVENT,
+  mockApplicants,
   mockEvents,
   mockRegistrations,
   mockReimbursements,
@@ -29,6 +31,7 @@ export class MockClient implements ApiClient {
   private readonly events = structuredClone(mockEvents);
   private readonly registrations = structuredClone(mockRegistrations);
   private readonly reimbursements = structuredClone(mockReimbursements);
+  private readonly applicants = structuredClone(mockApplicants);
 
   private readonly routes: Route[] = [
     this.route("GET", "/users", () => this.users),
@@ -40,6 +43,36 @@ export class MockClient implements ApiClient {
     ),
     this.route("GET", "/events/basic", () =>
       this.events.map((event) => this.toBasicEvent(event)),
+    ),
+    this.route("GET", "/events/review", () => [MOCK_REVIEW_EVENT]),
+    this.route("GET", "/events/:eventId/applicants", ({ eventId }) => ({
+      ...this.findReviewEvent(eventId),
+      applicants: this.applicants,
+    })),
+    this.route(
+      "PATCH",
+      "/events/:eventId/applicants/:attendeeId",
+      ({ eventId, attendeeId }, body) => {
+        this.findReviewEvent(eventId);
+        const applicant = this.applicants.find(
+          (a) => a.attendee_id === attendeeId,
+        );
+        if (!applicant) {
+          throw new ApiError(404, "NOT_FOUND", "Applicant not found");
+        }
+        if (applicant.status !== "APPLIED") {
+          throw new ApiError(
+            409,
+            "ALREADY_DECIDED",
+            "This applicant has already been reviewed",
+          );
+        }
+        const { status } = body as { status: "ACCEPTED" | "REJECTED" };
+        applicant.status = status;
+        applicant.reviewed_by = "dev.exec@example.ca";
+        applicant.reviewed_at = new Date().toISOString();
+        return applicant;
+      },
     ),
     this.route("POST", "/events/add", (_params, body) =>
       this.createEvent(asFormData(body)),
@@ -119,6 +152,13 @@ export class MockClient implements ApiClient {
     const user = this.users.find((u) => u.user_id === userId);
     if (!user) throw new ApiError(404, "NOT_FOUND", "Member not found");
     return user;
+  }
+
+  private findReviewEvent(eventId: string) {
+    if (eventId !== MOCK_REVIEW_EVENT.event_id) {
+      throw new ApiError(404, "NOT_FOUND", "Event not found");
+    }
+    return MOCK_REVIEW_EVENT;
   }
 
   private findEvent(eventId: string) {
