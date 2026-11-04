@@ -1,13 +1,18 @@
 import { Router } from "express";
 
 import { notImplemented } from "../lib/http-error.js";
+import type { UserStore } from "../lib/users.js";
 
-export const router = Router();
+export function createUsersRouter(users: UserStore) {
+  const router = Router();
 
-router.get("/", () => {
-  throw notImplemented();
-});
+  router.get("/", async (_req, res) => {
+    res.json(await users.listUsers());
+  });
 
-router.get("/:userId", () => {
-  throw notImplemented();
-});
+  router.get("/:userId", () => {
+    throw notImplemented();
+  });
+
+  return router;
+}

@@ -33,8 +33,9 @@ src/
   lib/supabase.ts           token verifier + service-role client
   lib/http-error.ts         HttpError → standard error JSON
   middleware/               requireAdmin, notFound, errorHandler
+  lib/users.ts, events.ts   members list, events grid, event details, attendees
   lib/applicants.ts         applicant review, decisions go through accept_applicants / reject_applicants
-  routes/                   users, events, reimbursements, budget (stubs → 501, except applicants)
+  routes/                   users, events, reimbursements, budget (stubs → 501, except members list, events grid, event details, attendees, applicants)
 ```
 
 ## Scripts

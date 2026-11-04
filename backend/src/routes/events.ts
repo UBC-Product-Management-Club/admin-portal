@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 
 import type { ApplicantStore } from "../lib/applicants.js";
+import type { EventStore } from "../lib/events.js";
 import { HttpError, notImplemented } from "../lib/http-error.js";
 
 const applicantParamsSchema = z.object({
@@ -11,11 +12,14 @@ const applicantParamsSchema = z.object({
 const eventParamsSchema = z.object({ eventId: z.guid() });
 const decisionSchema = z.object({ status: z.enum(["ACCEPTED", "REJECTED"]) });
 
-export function createEventsRouter(applicants: ApplicantStore) {
+export function createEventsRouter(
+  events: EventStore,
+  applicants: ApplicantStore,
+) {
   const router = Router();
 
-  router.get("/basic", () => {
-    throw notImplemented();
+  router.get("/basic", async (_req, res) => {
+    res.json(await events.listBasicEvents());
   });
 
   router.post("/add", () => {
@@ -27,8 +31,9 @@ export function createEventsRouter(applicants: ApplicantStore) {
     res.json(await applicants.listReviewEvents());
   });
 
-  router.get("/:eventId", () => {
-    throw notImplemented();
+  router.get("/:eventId", async (req, res) => {
+    const { eventId } = eventParamsSchema.parse(req.params);
+    res.json(await events.getEvent(eventId));
   });
 
   router.patch("/:eventId", () => {
@@ -39,8 +44,9 @@ export function createEventsRouter(applicants: ApplicantStore) {
     throw notImplemented();
   });
 
-  router.get("/:eventId/attendees", () => {
-    throw notImplemented();
+  router.get("/:eventId/attendees", async (req, res) => {
+    const { eventId } = eventParamsSchema.parse(req.params);
+    res.json(await events.listAttendees(eventId));
   });
 
   router.get("/:eventId/applicants", async (req, res) => {

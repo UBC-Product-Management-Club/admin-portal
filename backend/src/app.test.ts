@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "./app.js";
 import { HttpError } from "./lib/http-error.js";
 import type { ApplicantStore } from "./lib/applicants.js";
+import type { EventStore } from "./lib/events.js";
 import type { AuthUser, VerifyToken } from "./lib/supabase.js";
+import type { UserStore } from "./lib/users.js";
 
 const users: Record<string, AuthUser> = {
   "exec-token": { id: "u1", email: "exec@ubcpmc.com", emailConfirmed: true },
@@ -21,6 +23,12 @@ const users: Record<string, AuthUser> = {
 };
 const verifyToken: VerifyToken = async (token) => users[token] ?? null;
 
+const memberStore = { listUsers: vi.fn() } satisfies UserStore;
+const eventStore = {
+  listBasicEvents: vi.fn(),
+  getEvent: vi.fn(),
+  listAttendees: vi.fn(),
+} satisfies EventStore;
 const applicants = {
   listReviewEvents: vi.fn(),
   listApplicants: vi.fn(),
@@ -35,6 +43,8 @@ const app = createApp({
   corsOrigins: ["http://localhost:5173"],
   adminEmailDomains: ["ubcpmc.com"],
   verifyToken,
+  users: memberStore,
+  events: eventStore,
   applicants,
 });
 
@@ -75,7 +85,7 @@ describe("admin API", () => {
 
   it("lets PMC admins through to the route", async () => {
     const res = await request(app)
-      .get("/api/v2/admin/users")
+      .get("/api/v2/admin/budget")
       .set("Authorization", "Bearer exec-token")
       .expect(501);
     expect(res.body.error.code).toBe("NOT_IMPLEMENTED");
@@ -87,6 +97,62 @@ describe("admin API", () => {
       .expect(404, {
         error: { code: "NOT_FOUND", message: "No route for GET /nope" },
       });
+  });
+
+  it("lists members", async () => {
+    memberStore.listUsers.mockResolvedValue([{ user_id: "auth0|1" }]);
+    await request(app)
+      .get("/api/v2/admin/users")
+      .set("Authorization", "Bearer exec-token")
+      .expect(200, [{ user_id: "auth0|1" }]);
+  });
+
+  it("lists events for the grid", async () => {
+    eventStore.listBasicEvents.mockResolvedValue([{ event_id: "e1" }]);
+    await request(app)
+      .get("/api/v2/admin/events/basic")
+      .set("Authorization", "Bearer exec-token")
+      .expect(200, [{ event_id: "e1" }]);
+  });
+
+  it("shows one event's details and attendees", async () => {
+    eventStore.getEvent.mockResolvedValue({ event_id: EVENT_ID });
+    eventStore.listAttendees.mockResolvedValue([{ user_id: "auth0|1" }]);
+    await request(app)
+      .get(`/api/v2/admin/events/${EVENT_ID}`)
+      .set("Authorization", "Bearer exec-token")
+      .expect(200, { event_id: EVENT_ID });
+    await request(app)
+      .get(`/api/v2/admin/events/${EVENT_ID}/attendees`)
+      .set("Authorization", "Bearer exec-token")
+      .expect(200, [{ user_id: "auth0|1" }]);
+    expect(eventStore.getEvent).toHaveBeenCalledWith(EVENT_ID);
+    expect(eventStore.listAttendees).toHaveBeenCalledWith(EVENT_ID);
+  });
+
+  it("rejects event ids that aren't valid", async () => {
+    await request(app)
+      .get("/api/v2/admin/events/not-an-id")
+      .set("Authorization", "Bearer exec-token")
+      .expect(400);
+    expect(eventStore.getEvent).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "/users",
+    "/events/basic",
+    `/events/${EVENT_ID}`,
+    `/events/${EVENT_ID}/attendees`,
+  ])("keeps %s behind admin auth", async (path) => {
+    await request(app).get(`/api/v2/admin${path}`).expect(401);
+    await request(app)
+      .get(`/api/v2/admin${path}`)
+      .set("Authorization", "Bearer outsider-token")
+      .expect(403);
+    expect(memberStore.listUsers).not.toHaveBeenCalled();
+    expect(eventStore.listBasicEvents).not.toHaveBeenCalled();
+    expect(eventStore.getEvent).not.toHaveBeenCalled();
+    expect(eventStore.listAttendees).not.toHaveBeenCalled();
   });
 
   describe("applicants", () => {
