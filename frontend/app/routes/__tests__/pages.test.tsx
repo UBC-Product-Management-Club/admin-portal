@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import { createRoutesStub, Outlet } from "react-router";
 
 import { ApiError } from "~/lib/api/rest-client";
+import { formatVancouverTime } from "~/lib/format";
 import { eventService } from "~/lib/services/event-service";
 import { reimbursementService } from "~/lib/services/reimbursement-service";
 import { attendeeListSchema } from "~/lib/types/attendee";
@@ -131,9 +132,12 @@ describe("portal pages (mock data)", () => {
     const user = userEvent.setup();
     renderPage("applicants", "/applicants", Applicants, applicantsLoader);
 
-    // Stored as 07:00 UTC, which is the evening before in Vancouver.
+    // Expected text uses the same formatter: the exact wording and UTC offset
+    // depend on the runtime's locale and timezone data.
     expect(
-      await screen.findByText(/Pay by Fri, Nov\.? 6.*11:00.*PST/),
+      await screen.findByText(
+        `Pay by ${formatVancouverTime("2026-11-07T07:00:00Z")}`,
+      ),
     ).toBeInTheDocument();
 
     await user.click(
@@ -147,11 +151,17 @@ describe("portal pages (mock data)", () => {
     const time = screen.getByLabelText("New payment deadline time");
     await user.clear(time);
     await user.type(time, "20:00");
-    expect(screen.getByText(/In Vancouver: .*12:00.*PST/)).toBeInTheDocument();
+    const newDeadline = formatVancouverTime("2099-01-10T20:00:00.000Z");
+    expect(newDeadline).toMatch(/\bP[DS]T\b/);
+    expect(
+      screen.getByText(`In Vancouver: ${newDeadline}`),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Save deadline" }));
 
-    expect(await screen.findByText(/Pay by .*Jan\.? 10/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(`Pay by ${newDeadline}`),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Save deadline" }),
     ).not.toBeInTheDocument();
