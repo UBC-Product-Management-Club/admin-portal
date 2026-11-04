@@ -116,29 +116,38 @@ export function EventAttendees({
   eventName: string;
   attendees: Attendee[];
 }) {
+  const total = attendees.length;
   const [search, setSearch] = useState("");
+  // Hide what isn't tracked rather than showing everyone as "Not yet".
+  const trackedColumns = BOOLEAN_COLUMNS.filter(
+    ({ key }) => total === 0 || attendees.some((a) => a[key] !== null),
+  );
   const table = useReactTable({
     data: attendees,
     columns,
-    state: { globalFilter: search },
+    state: {
+      globalFilter: search,
+      columnVisibility: Object.fromEntries(
+        BOOLEAN_COLUMNS.map((c) => [c.key, trackedColumns.includes(c)]),
+      ),
+    },
     globalFilterFn: matchesSearch,
     onGlobalFilterChange: setSearch,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
   });
   const rows = table.getRowModel().rows;
-  const total = attendees.length;
 
   function handleExport() {
     downloadCsv(
       `${eventName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-attendees.csv`,
       toCsv(
-        ["Name", "Email", "RSVP", ...BOOLEAN_COLUMNS.map((c) => c.header)],
+        ["Name", "Email", "RSVP", ...trackedColumns.map((c) => c.header)],
         rows.map(({ original: a }) => [
           a.name,
           a.email,
           RSVP_CHIPS[a.rsvp].label,
-          ...BOOLEAN_COLUMNS.map((c) => (a[c.key] ? c.yes : c.no)),
+          ...trackedColumns.map((c) => (a[c.key] ? c.yes : c.no)),
         ]),
       ),
     );
@@ -152,7 +161,7 @@ export function EventAttendees({
           value={attendees.filter((a) => a.rsvp === "going").length}
           total={total}
         />
-        {BOOLEAN_COLUMNS.map((column) => (
+        {trackedColumns.map((column) => (
           <TotalCard
             key={column.key}
             label={column.statLabel}
@@ -209,7 +218,7 @@ export function EventAttendees({
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={table.getVisibleLeafColumns().length}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   {total === 0

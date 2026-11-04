@@ -157,7 +157,11 @@ function EventCard({ event, isPast }: { event: BasicEvent; isPast: boolean }) {
       </span>
       <span className="flex flex-1 flex-col gap-2 px-[18px] pt-4 pb-[18px]">
         <span className="flex flex-wrap gap-1.5">
-          <StatusChip tone="accent">{EVENT_TYPE_LABELS[event.type]}</StatusChip>
+          {event.type && (
+            <StatusChip tone="accent">
+              {EVENT_TYPE_LABELS[event.type]}
+            </StatusChip>
+          )}
           <StatusChip tone={event.isOnPortal ? "success" : "neutral"}>
             {event.isOnPortal ? "On portal" : "Hidden"}
           </StatusChip>
@@ -172,7 +176,9 @@ function EventCard({ event, isPast }: { event: BasicEvent; isPast: boolean }) {
         <span className="mt-auto flex justify-between border-t border-divider pt-2.5 text-[13px] text-muted-foreground">
           <span>
             {isPast
-              ? `${event.attendedCount} attended`
+              ? event.attendedCount === null
+                ? `${event.goingCount} registered`
+                : `${event.attendedCount} attended`
               : event.isOnPortal
                 ? `${event.goingCount} going`
                 : "Not published yet"}

@@ -11,9 +11,10 @@ export const attendeeSchema = z
     email: z.string(),
     rsvp: z.enum(RSVP_STATUSES),
     paid: z.boolean(),
-    checked_in: z.boolean(),
-    food_claimed: z.boolean(),
-    workshop_checked_in: z.boolean(),
+    // Null until migration 001 adds check-in tracking; the table hides them.
+    checked_in: z.boolean().nullable(),
+    food_claimed: z.boolean().nullable(),
+    workshop_checked_in: z.boolean().nullable(),
   })
   .transform((attendee) => ({
     userId: attendee.user_id,

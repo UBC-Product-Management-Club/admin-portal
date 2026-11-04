@@ -148,7 +148,7 @@ export default function Members({ loaderData }: Route.ComponentProps) {
           m.faculty,
           m.major,
           m.studentId,
-          m.createdAt.slice(0, 10),
+          m.createdAt?.slice(0, 10),
           m.whyPm,
         ]),
       ),
@@ -176,8 +176,10 @@ export default function Members({ loaderData }: Route.ComponentProps) {
         <StatCard
           label="Joined this year"
           value={
-            members.filter((m) => schoolYearOf(m.createdAt) === thisSchoolYear)
-              .length
+            members.filter(
+              (m) =>
+                m.createdAt && schoolYearOf(m.createdAt) === thisSchoolYear,
+            ).length
           }
         />
         <StatCard

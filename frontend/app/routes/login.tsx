@@ -9,12 +9,8 @@ import { Input } from "~/components/ui/input";
 import { getSessionUser } from "~/lib/session";
 import { getSupabase } from "~/lib/supabase";
 
-// Applicants is the only page with a real backend so far; the dashboard's
-// endpoints still return 501. Point this back at /dashboard once they exist.
-const HOME_PATH = "/applicants";
-
 export async function clientLoader() {
-  if (await getSessionUser()) throw redirect(HOME_PATH);
+  if (await getSessionUser()) throw redirect("/dashboard");
   return null;
 }
 
@@ -39,7 +35,7 @@ export default function Login() {
       setHasError(true);
       return;
     }
-    navigate(HOME_PATH, { replace: true });
+    navigate("/dashboard", { replace: true });
   }
 
   return (

@@ -1,8 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentType } from "react";
 import { createRoutesStub, Outlet } from "react-router";
 
+import { ApiError } from "~/lib/api/rest-client";
+import { eventService } from "~/lib/services/event-service";
+import { reimbursementService } from "~/lib/services/reimbursement-service";
+import { attendeeListSchema } from "~/lib/types/attendee";
+import { basicEventListSchema } from "~/lib/types/event";
+import { userListSchema } from "~/lib/types/user";
 import Applicants, {
   clientLoader as applicantsLoader,
 } from "~/routes/applicants";
@@ -134,6 +140,114 @@ describe("portal pages (mock data)", () => {
       screen.getByRole("button", { name: "Reject Noah Tran" }),
     ).toBeInTheDocument();
     confirm.mockRestore();
+  });
+
+  it("dashboard still loads while reimbursements aren't built", async () => {
+    const spy = vi
+      .spyOn(reimbursementService, "listMyRequests")
+      .mockRejectedValue(new ApiError(501, "NOT_IMPLEMENTED", "Not yet"));
+
+    renderPage("dashboard", "/dashboard", Dashboard, dashboardLoader);
+
+    expect(await screen.findByText("Not set up yet")).toBeInTheDocument();
+    expect(screen.getByText("Members by year")).toBeInTheDocument();
+    spy.mockRestore();
+  });
+
+  it("dashboard shows an error for other reimbursement failures", async () => {
+    const spy = vi
+      .spyOn(reimbursementService, "listMyRequests")
+      .mockRejectedValue(new ApiError(500, "INTERNAL", "Server error"));
+
+    renderPage("dashboard", "/dashboard", Dashboard, dashboardLoader);
+
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(screen.queryByText("Members by year")).not.toBeInTheDocument();
+    spy.mockRestore();
+  });
+
+  it("event cards handle data the database doesn't have yet", async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [event] = basicEventListSchema.parse([
+      {
+        event_id: "e1",
+        name: "Past Event",
+        type: null,
+        start_time: yesterday.toISOString(),
+        end_time: yesterday.toISOString(),
+        location: "Sauder",
+        thumbnail_url: null,
+        is_disabled: false,
+        going_count: 4,
+        attended_count: null,
+      },
+    ]);
+    const user = userEvent.setup();
+    const spy = vi.spyOn(eventService, "listEvents").mockResolvedValue([event]);
+
+    renderPage("events", "/events", Events, eventsLoader);
+
+    await user.click(await screen.findByRole("tab", { name: "Past" }));
+
+    expect(await screen.findByText("Past Event")).toBeInTheDocument();
+    expect(screen.getByText("4 registered")).toBeInTheDocument();
+    expect(screen.queryByText(/attended/)).not.toBeInTheDocument();
+    spy.mockRestore();
+  });
+
+  it("event details hide check-in columns the database doesn't track", async () => {
+    const spy = vi.spyOn(eventService, "listAttendees").mockResolvedValue(
+      attendeeListSchema.parse([
+        {
+          user_id: "auth0|1",
+          first_name: "Ava",
+          last_name: "Chen",
+          email: "ava@example.ca",
+          rsvp: "going",
+          paid: true,
+          checked_in: null,
+          food_claimed: null,
+          workshop_checked_in: null,
+        },
+      ]),
+    );
+
+    renderPage(
+      "events/:eventId",
+      "/events/evt-04",
+      EventDetail,
+      eventDetailLoader,
+    );
+
+    expect(await screen.findByText("Ava Chen")).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Payment" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Check-in" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Food claimed")).not.toBeInTheDocument();
+    spy.mockRestore();
+  });
+
+  it("members load when join dates are missing", () => {
+    const [member] = userListSchema.parse([
+      {
+        user_id: "auth0|1",
+        first_name: "Ava",
+        last_name: "Chen",
+        email: "ava@example.ca",
+        pronouns: null,
+        university: "Other",
+        year: null,
+        faculty: null,
+        major: null,
+        why_pm: null,
+        student_id: null,
+        created_at: null,
+      },
+    ]);
+    expect(member.createdAt).toBeNull();
   });
 
   it("events grid shows upcoming events for this school year", async () => {

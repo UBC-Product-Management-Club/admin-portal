@@ -25,14 +25,15 @@ export const basicEventSchema = z
   .object({
     event_id: z.string(),
     name: z.string(),
-    type: z.enum(EVENT_TYPES),
+    // Null until migration 001 adds types and check-in tracking.
+    type: z.enum(EVENT_TYPES).nullable(),
     start_time: timestamp,
     end_time: timestamp,
     location: z.string(),
     thumbnail_url: z.string().nullable(),
     is_disabled: z.boolean(),
     going_count: z.number().int(),
-    attended_count: z.number().int(),
+    attended_count: z.number().int().nullable(),
   })
   .transform((event) => ({
     eventId: event.event_id,
@@ -54,7 +55,7 @@ export const eventSchema = z
   .object({
     event_id: z.string(),
     name: z.string(),
-    type: z.enum(EVENT_TYPES),
+    type: z.enum(EVENT_TYPES).nullable(),
     start_time: timestamp,
     end_time: timestamp,
     location: z.string(),

@@ -15,6 +15,7 @@ import { DateBadge } from "~/components/date-badge";
 import { RouteError } from "~/components/route-error";
 import { StatCard } from "~/components/stat-card";
 import { useUserData } from "~/hooks/use-user-data";
+import { ApiError } from "~/lib/api/rest-client";
 import { formatDate, formatRelativeDays, schoolYearOf } from "~/lib/format";
 import { eventService } from "~/lib/services/event-service";
 import { reimbursementService } from "~/lib/services/reimbursement-service";
@@ -34,7 +35,11 @@ export async function clientLoader() {
   const [members, events, reimbursements] = await Promise.all([
     userService.listUsers(),
     eventService.listEvents(),
-    reimbursementService.listMyRequests(),
+    // Reimbursements aren't built on the backend yet; the rest still loads.
+    reimbursementService.listMyRequests().catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 501) return null;
+      throw error;
+    }),
   ]);
 
   const now = new Date();
@@ -56,7 +61,8 @@ export async function clientLoader() {
   return {
     thisSchoolYear,
     memberCount: members.length,
-    waitingCount: reimbursements.filter((r) => r.status === "submitted").length,
+    waitingCount:
+      reimbursements?.filter((r) => r.status === "submitted").length ?? null,
     eventsThisYear: events.filter(
       (event) => schoolYearOf(event.startTime) === thisSchoolYear,
     ).length,
@@ -107,8 +113,10 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
         />
         <StatCard
           label="Reimbursements"
-          value={waitingCount}
-          caption="Waiting for approval"
+          value={waitingCount ?? "—"}
+          caption={
+            waitingCount === null ? "Not set up yet" : "Waiting for approval"
+          }
         />
         <StatCard
           label="Events this year"

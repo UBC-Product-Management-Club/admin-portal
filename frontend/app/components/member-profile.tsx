@@ -80,7 +80,7 @@ export function MemberProfile({ member }: { member: User }) {
         <ProfileField label="Student ID" value={member.studentId} />
         <ProfileField
           label="Joined"
-          value={formatMonthYear(member.createdAt)}
+          value={member.createdAt && formatMonthYear(member.createdAt)}
         />
       </dl>
 
