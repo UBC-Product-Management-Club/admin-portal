@@ -46,13 +46,23 @@ jobs:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
         run: |
+          # CORS has to allow every URL the portal is served from: the custom domain and both of
+          # the frontend service's run.app URLs. The service doesn't exist before the first deploy.
+          origins="https://admin.ubcpmc.com"
+          if frontend=$(gcloud run services describe "$APP_NAME" \
+            --project "$PROJECT_ID" --region "$REGION" --format json 2>/dev/null); then
+            origins="$origins,$(jq -r '[.status.url]
+              + ((.metadata.annotations["run.googleapis.com/urls"] // "[]") | fromjson)
+              | map(select(. != null)) | unique | join(",")' <<<"$frontend")"
+          fi
+          echo "CORS origins: $origins"
           # The API does its own auth on every admin route, so the service is public.
           gcloud run deploy "$APP_NAME-api" \
             --project "$PROJECT_ID" \
             --region "$REGION" \
             --image "$REGISTRY/$APP_NAME-api:$GITHUB_SHA" \
             --allow-unauthenticated \
-            --update-env-vars "^|^ORIGIN=http://localhost:5173|ADMIN_PORTAL_ORIGIN=https://admin.ubcpmc.com|SUPABASE_URL=$SUPABASE_URL|SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY|ADMIN_EMAIL_DOMAINS=ubcpmc.com" \
+            --update-env-vars "^|^ORIGIN=http://localhost:5173|ADMIN_PORTAL_ORIGIN=$origins|SUPABASE_URL=$SUPABASE_URL|SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY|ADMIN_EMAIL_DOMAINS=ubcpmc.com" \
             --update-secrets "SUPABASE_SERVICE_ROLE_KEY=admin-portal-supabase-service-role-key:latest"
           url=$(gcloud run services describe "$APP_NAME-api" \
             --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')

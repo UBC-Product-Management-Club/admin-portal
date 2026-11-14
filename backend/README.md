@@ -16,7 +16,7 @@ npm run dev            # http://localhost:8000
 | --------------------------- | ----------------------------------------------------------- |
 | `PORT`                      | Port to listen on (Cloud Run sets this)                     |
 | `ORIGIN`                    | Local portal origin allowed by CORS                         |
-| `ADMIN_PORTAL_ORIGIN`       | Deployed portal origin allowed by CORS                      |
+| `ADMIN_PORTAL_ORIGIN`       | Deployed portal origins allowed by CORS (comma-separated)   |
 | `SUPABASE_URL`              | Supabase project URL                                        |
 | `SUPABASE_ANON_KEY`         | Used to verify user JWTs                                    |
 | `SUPABASE_SERVICE_ROLE_KEY` | Database/storage access — server-side only, never commit    |
