@@ -309,11 +309,14 @@ describe("portal pages (mock data)", () => {
   });
 
   it("events grid shows upcoming events for this school year", async () => {
+    // Mock events are fixed dates, so pin "now" to keep the test date-independent.
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-20T12:00:00Z") });
     renderPage("events", "/events", Events, eventsLoader);
     expect(await screen.findByText("PM 101 Workshop")).toBeInTheDocument();
     expect(
       screen.queryByText("Industry Speaker Panel"),
     ).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it("event details shows attendees and configuration tabs", async () => {
