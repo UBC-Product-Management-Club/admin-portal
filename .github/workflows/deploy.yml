@@ -1,32 +1,92 @@
 name: Deploy
 
-# Deploys main to Cloud Run once CI has passed, or on demand from the Actions tab.
+# main deploys to staging once CI has passed. Production deploys only on demand from the
+# Actions tab (Run workflow -> production).
+#
+# Each GitHub environment ("staging", "production") holds its own Supabase project:
+#   vars.SUPABASE_URL, vars.SUPABASE_ANON_KEY
+# The service-role key lives in Secret Manager, one secret per environment (see SERVICE_ROLE_SECRET).
+# The repo-level var PROD_SUPABASE_REF names the production project, and the guard step below
+# refuses to deploy staging against it or production against anything else.
 on:
   workflow_run:
     workflows: [CI]
     branches: [main]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to deploy
+        type: choice
+        options: [staging, production]
+        default: staging
 
 concurrency:
-  group: deploy
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
   cancel-in-progress: false
-
-env:
-  REGION: us-west1
-  PROJECT_ID: ${{ secrets.PROJECT_ID }}
-  APP_NAME: ${{ secrets.APP_NAME }}
-  # Image tags are per commit, so a bad deploy can be rolled back in Cloud Run.
-  REGISTRY: us-west1-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ vars.ARTIFACT_REPOSITORY }}
 
 jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+    env:
+      DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+      REGION: us-west1
+      PROJECT_ID: ${{ secrets.PROJECT_ID }}
+      # Image tags are per commit, so a bad deploy can be rolled back in Cloud Run.
+      REGISTRY: us-west1-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ vars.ARTIFACT_REPOSITORY }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+      PROD_SUPABASE_REF: ${{ vars.PROD_SUPABASE_REF }}
+      BASE_APP_NAME: ${{ secrets.APP_NAME }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      # Service names, the custom domain and the Secret Manager key all follow from DEPLOY_ENV,
+      # so a missing environment setting can't send staging onto the production services.
+      - name: Pick services and check the Supabase project
+        run: |
+          if [ "$DEPLOY_ENV" = production ]; then
+            app="$BASE_APP_NAME"
+            domain="https://admin.ubcpmc.com"
+            secret="admin-portal-supabase-service-role-key"
+          else
+            app="$BASE_APP_NAME-staging"
+            domain=""
+            secret="admin-portal-staging-supabase-service-role-key"
+          fi
+
+          : "${SUPABASE_URL:?SUPABASE_URL is not set for $DEPLOY_ENV}"
+          : "${SUPABASE_ANON_KEY:?SUPABASE_ANON_KEY is not set for $DEPLOY_ENV}"
+          : "${PROD_SUPABASE_REF:?PROD_SUPABASE_REF (repo variable) is not set}"
+
+          url_ref=$(sed -E 's#^https://([a-z0-9]+)\.supabase\.co/?$#\1#' <<<"$SUPABASE_URL")
+          payload=$(cut -d. -f2 <<<"$SUPABASE_ANON_KEY" | tr '_-' '/+')
+          while [ $(( ${#payload} % 4 )) -ne 0 ]; do payload="$payload="; done
+          key_ref=$(base64 -d <<<"$payload" | jq -r .ref)
+
+          if [ "$url_ref" != "$key_ref" ]; then
+            echo "::error::SUPABASE_URL ($url_ref) and SUPABASE_ANON_KEY ($key_ref) are different projects"
+            exit 1
+          fi
+          if [ "$DEPLOY_ENV" = production ] && [ "$url_ref" != "$PROD_SUPABASE_REF" ]; then
+            echo "::error::production must use the production Supabase project, got $url_ref"
+            exit 1
+          fi
+          if [ "$DEPLOY_ENV" != production ] && [ "$url_ref" = "$PROD_SUPABASE_REF" ]; then
+            echo "::error::$DEPLOY_ENV is pointed at the production Supabase project"
+            exit 1
+          fi
+          echo "Deploying $DEPLOY_ENV as $app with Supabase project $url_ref"
+
+          {
+            echo "APP_NAME=$app"
+            echo "CUSTOM_DOMAIN=$domain"
+            echo "SERVICE_ROLE_SECRET=$secret"
+          } >> "$GITHUB_ENV"
 
       - uses: google-github-actions/auth@v2
         with:
@@ -42,19 +102,18 @@ jobs:
 
       - name: Deploy backend
         id: backend
-        env:
-          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
         run: |
-          # CORS has to allow every URL the portal is served from: the custom domain and both of
-          # the frontend service's run.app URLs. The service doesn't exist before the first deploy.
-          origins="https://admin.ubcpmc.com"
+          # CORS has to allow every URL the portal is served from: the custom domain (production
+          # only) and both of the frontend service's run.app URLs. The service doesn't exist
+          # before the first deploy.
+          origins="$CUSTOM_DOMAIN"
           if frontend=$(gcloud run services describe "$APP_NAME" \
             --project "$PROJECT_ID" --region "$REGION" --format json 2>/dev/null); then
             origins="$origins,$(jq -r '[.status.url]
               + ((.metadata.annotations["run.googleapis.com/urls"] // "[]") | fromjson)
               | map(select(. != null)) | unique | join(",")' <<<"$frontend")"
           fi
+          origins="${origins#,}"
           echo "CORS origins: $origins"
           # The API does its own auth on every admin route, so the service is public.
           gcloud run deploy "$APP_NAME-api" \
@@ -63,7 +122,7 @@ jobs:
             --image "$REGISTRY/$APP_NAME-api:$GITHUB_SHA" \
             --allow-unauthenticated \
             --update-env-vars "^|^ORIGIN=http://localhost:5173|ADMIN_PORTAL_ORIGIN=$origins|SUPABASE_URL=$SUPABASE_URL|SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY|ADMIN_EMAIL_DOMAINS=ubcpmc.com" \
-            --update-secrets "SUPABASE_SERVICE_ROLE_KEY=admin-portal-supabase-service-role-key:latest"
+            --update-secrets "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_SECRET:latest"
           url=$(gcloud run services describe "$APP_NAME-api" \
             --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')
           echo "url=$url" >> "$GITHUB_OUTPUT"
@@ -71,8 +130,6 @@ jobs:
       - name: Build frontend image
         env:
           API_URL: ${{ steps.backend.outputs.url }}
-          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
         run: |
           # Vite inlines VITE_* at build time, so these go in through Cloud Build.
           gcloud builds submit frontend \
