@@ -1,15 +1,22 @@
-name: Deploy
+name: Deploy to Cloud Run
 
-# Deploys main to Cloud Run once CI has passed, or on demand from the Actions tab.
+# Shared by deploy-staging.yaml and deploy.yaml. Each run reads its values from the GitHub
+# Environment it deploys to (Settings > Environments), so staging never touches prod data.
+#   Repo-wide: secrets PROJECT_ID, GCLOUD_AUTH; variable ARTIFACT_REPOSITORY
+#   Per environment: secret APP_NAME; variables SUPABASE_URL, SUPABASE_ANON_KEY,
+#   SERVICE_ROLE_SECRET (Secret Manager name), CUSTOM_DOMAIN (optional, prod only)
 on:
-  workflow_run:
-    workflows: [CI]
-    branches: [main]
-    types: [completed]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      ref:
+        required: true
+        type: string
 
 concurrency:
-  group: deploy
+  group: deploy-${{ inputs.environment }}
   cancel-in-progress: false
 
 env:
@@ -17,16 +24,33 @@ env:
   PROJECT_ID: ${{ secrets.PROJECT_ID }}
   APP_NAME: ${{ secrets.APP_NAME }}
   # Image tags are per commit, so a bad deploy can be rolled back in Cloud Run.
+  IMAGE_TAG: ${{ inputs.ref }}
   REGISTRY: us-west1-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ vars.ARTIFACT_REPOSITORY }}
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
+      - name: Check the environment is set up
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          SERVICE_ROLE_SECRET: ${{ vars.SERVICE_ROLE_SECRET }}
+        run: |
+          # Fail rather than deploy with a missing value, or with a repo-wide one meant for prod.
+          missing=""
+          for name in PROJECT_ID APP_NAME SUPABASE_URL SUPABASE_ANON_KEY SERVICE_ROLE_SECRET; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Set these in the ${{ inputs.environment }} environment:$missing"
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ inputs.ref }}
 
       - uses: google-github-actions/auth@v2
         with:
@@ -38,20 +62,23 @@ jobs:
         run: |
           gcloud builds submit backend \
             --project "$PROJECT_ID" \
-            --tag "$REGISTRY/$APP_NAME-api:$GITHUB_SHA"
+            --tag "$REGISTRY/$APP_NAME-api:$IMAGE_TAG"
 
       - name: Deploy backend
         id: backend
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          SERVICE_ROLE_SECRET: ${{ vars.SERVICE_ROLE_SECRET }}
+          CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
         run: |
-          # CORS has to allow every URL the portal is served from: the custom domain and both of
-          # the frontend service's run.app URLs. The service doesn't exist before the first deploy.
-          origins="https://admin.ubcpmc.com"
+          # CORS has to allow every URL the portal is served from: the custom domain, if any, and
+          # both of the frontend service's run.app URLs. The service doesn't exist before the first deploy.
+          origins=""
+          if [ -n "$CUSTOM_DOMAIN" ]; then origins="https://$CUSTOM_DOMAIN"; fi
           if frontend=$(gcloud run services describe "$APP_NAME" \
             --project "$PROJECT_ID" --region "$REGION" --format json 2>/dev/null); then
-            origins="$origins,$(jq -r '[.status.url]
+            origins="${origins:+$origins,}$(jq -r '[.status.url]
               + ((.metadata.annotations["run.googleapis.com/urls"] // "[]") | fromjson)
               | map(select(. != null)) | unique | join(",")' <<<"$frontend")"
           fi
@@ -60,10 +87,10 @@ jobs:
           gcloud run deploy "$APP_NAME-api" \
             --project "$PROJECT_ID" \
             --region "$REGION" \
-            --image "$REGISTRY/$APP_NAME-api:$GITHUB_SHA" \
+            --image "$REGISTRY/$APP_NAME-api:$IMAGE_TAG" \
             --allow-unauthenticated \
             --update-env-vars "^|^ORIGIN=http://localhost:5173|ADMIN_PORTAL_ORIGIN=$origins|SUPABASE_URL=$SUPABASE_URL|SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY|ADMIN_EMAIL_DOMAINS=ubcpmc.com" \
-            --update-secrets "SUPABASE_SERVICE_ROLE_KEY=admin-portal-supabase-service-role-key:latest"
+            --update-secrets "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_SECRET:latest"
           url=$(gcloud run services describe "$APP_NAME-api" \
             --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')
           echo "url=$url" >> "$GITHUB_OUTPUT"
@@ -78,14 +105,14 @@ jobs:
           gcloud builds submit frontend \
             --project "$PROJECT_ID" \
             --config frontend/cloudbuild.yaml \
-            --substitutions "^|^_IMAGE=$REGISTRY/$APP_NAME:$GITHUB_SHA|_VITE_API_URL=$API_URL|_VITE_SUPABASE_URL=$SUPABASE_URL|_VITE_SUPABASE_PUBLIC_KEY=$SUPABASE_ANON_KEY"
+            --substitutions "^|^_IMAGE=$REGISTRY/$APP_NAME:$IMAGE_TAG|_VITE_API_URL=$API_URL|_VITE_SUPABASE_URL=$SUPABASE_URL|_VITE_SUPABASE_PUBLIC_KEY=$SUPABASE_ANON_KEY"
 
       - name: Deploy frontend
         run: |
           gcloud run deploy "$APP_NAME" \
             --project "$PROJECT_ID" \
             --region "$REGION" \
-            --image "$REGISTRY/$APP_NAME:$GITHUB_SHA" \
+            --image "$REGISTRY/$APP_NAME:$IMAGE_TAG" \
             --port 8080 \
             --allow-unauthenticated
 
