@@ -1,0 +1,14 @@
+name: Deploy (PROD)
+
+# Same convention as pmc-portal-be: production is only deployed by hand from the Actions tab.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/_deploy.yaml
+    with:
+      environment: production
+      ref: ${{ github.sha }}
+    secrets: inherit
