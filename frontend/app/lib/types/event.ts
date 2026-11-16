@@ -25,7 +25,7 @@ export const basicEventSchema = z
   .object({
     event_id: z.string(),
     name: z.string(),
-    // Null until migration 001 adds types and check-in tracking.
+    // Null until migration 002 adds types and check-in tracking.
     type: z.enum(EVENT_TYPES).nullable(),
     start_time: timestamp,
     end_time: timestamp,

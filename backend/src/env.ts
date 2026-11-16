@@ -20,6 +20,7 @@ const envSchema = z.object({
   SUPABASE_BUCKET_NAME: z.string().default("event-media"),
   SUPABASE_DELIVERABLES_BUCKET_NAME: z.string().default("deliverables"),
   SUPABASE_ATTENDEE_BUCKET_NAME: z.string().default("attendee-files"),
+  SUPABASE_RECEIPTS_BUCKET_NAME: z.string().default("receipts"),
   ADMIN_EMAIL_DOMAINS: z
     .string()
     .min(1, "Set ADMIN_EMAIL_DOMAINS so only PMC emails can use the admin API")

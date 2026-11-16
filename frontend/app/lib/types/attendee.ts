@@ -11,7 +11,7 @@ export const attendeeSchema = z
     email: z.string(),
     rsvp: z.enum(RSVP_STATUSES),
     paid: z.boolean(),
-    // Null until migration 001 adds check-in tracking; the table hides them.
+    // Null until migration 002 adds check-in tracking; the table hides them.
     checked_in: z.boolean().nullable(),
     food_claimed: z.boolean().nullable(),
     workshop_checked_in: z.boolean().nullable(),

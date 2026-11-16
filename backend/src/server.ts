@@ -2,6 +2,7 @@ import { createApp } from "./app.js";
 import { loadEnv } from "./env.js";
 import { createApplicantStore } from "./lib/applicants.js";
 import { createEventStore } from "./lib/events.js";
+import { createReimbursementStore } from "./lib/reimbursements.js";
 import { createAdminClient, createTokenVerifier } from "./lib/supabase.js";
 import { createUserStore } from "./lib/users.js";
 
@@ -17,6 +18,10 @@ const app = createApp({
   users: createUserStore(db),
   events: createEventStore(db),
   applicants: createApplicantStore(db, env.SUPABASE_ATTENDEE_BUCKET_NAME),
+  reimbursements: createReimbursementStore(
+    db,
+    env.SUPABASE_RECEIPTS_BUCKET_NAME,
+  ),
 });
 
 app.listen(env.PORT, () => {

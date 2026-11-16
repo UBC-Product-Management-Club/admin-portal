@@ -17,7 +17,7 @@ export const userSchema = z
     why_pm: z.string().nullable(),
     // Not in the HLD users table yet, but FR-5/FR-6 search and show it.
     student_id: z.string().nullable(),
-    // Null until migration 001 adds it; existing members stay null after that.
+    // Null until migration 002 adds it; existing members stay null after that.
     created_at: z.iso.datetime({ offset: true }).nullable(),
   })
   .transform((user) => ({
