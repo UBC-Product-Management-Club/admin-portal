@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { ApplicantStore } from "../lib/applicants.js";
 import type { EventStore } from "../lib/events.js";
 import { HttpError, notImplemented } from "../lib/http-error.js";
+import type { SubmissionStore } from "../lib/submissions.js";
 
 const applicantParamsSchema = z.object({
   eventId: z.guid(),
@@ -18,6 +19,7 @@ const paymentDueSchema = z.object({
 export function createEventsRouter(
   events: EventStore,
   applicants: ApplicantStore,
+  submissions: SubmissionStore,
 ) {
   const router = Router();
 
@@ -50,6 +52,11 @@ export function createEventsRouter(
   router.get("/:eventId/attendees", async (req, res) => {
     const { eventId } = eventParamsSchema.parse(req.params);
     res.json(await events.listAttendees(eventId));
+  });
+
+  router.get("/:eventId/submissions", async (req, res) => {
+    const { eventId } = eventParamsSchema.parse(req.params);
+    res.json(await submissions.listSubmissions(eventId));
   });
 
   router.get("/:eventId/applicants", async (req, res) => {
