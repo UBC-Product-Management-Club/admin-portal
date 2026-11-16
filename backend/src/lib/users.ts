@@ -64,7 +64,7 @@ export function createUserStore(db: SupabaseClient): UserStore {
             user.university &&
             (UNIVERSITY_CODES[user.university] ?? OTHER_UNIVERSITY),
           year: user.year && STUDY_YEARS.has(user.year) ? user.year : null,
-          // User.created_at comes from migration 001.
+          // User.created_at comes from migration 002.
           created_at: null,
         }));
     },

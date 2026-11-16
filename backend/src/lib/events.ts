@@ -122,7 +122,7 @@ export function createEventStore(db: SupabaseClient): EventStore {
         .map((event) => ({
           event_id: event.event_id,
           name: event.name,
-          // Both come from migration 001: Event.type and Attendee.checked_in.
+          // Both come from migration 002: Event.type and Attendee.checked_in.
           type: null,
           attended_count: null,
           start_time: event.start_time,
@@ -164,7 +164,7 @@ export function createEventStore(db: SupabaseClient): EventStore {
       return {
         event_id: row.event_id,
         name: row.name,
-        // Event.type and Event.tracks come from migration 001.
+        // Event.type and Event.tracks come from migration 002.
         type: null,
         tracks: [],
         start_time: row.start_time,
@@ -205,7 +205,7 @@ export function createEventStore(db: SupabaseClient): EventStore {
           rsvp: "going",
           // Free registrations finish with no payment to verify.
           paid: row.is_payment_verified || row.status === "REGISTERED",
-          // These come from migration 001; null tells the portal to hide them.
+          // These come from migration 002; null tells the portal to hide them.
           checked_in: null,
           food_claimed: null,
           workshop_checked_in: null,

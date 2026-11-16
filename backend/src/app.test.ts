@@ -5,6 +5,7 @@ import { createApp } from "./app.js";
 import { HttpError } from "./lib/http-error.js";
 import type { ApplicantStore } from "./lib/applicants.js";
 import type { EventStore } from "./lib/events.js";
+import type { ReimbursementStore } from "./lib/reimbursements.js";
 import type { AuthUser, VerifyToken } from "./lib/supabase.js";
 import type { UserStore } from "./lib/users.js";
 
@@ -35,6 +36,11 @@ const applicants = {
   decide: vi.fn(),
   setPaymentDue: vi.fn(),
 } satisfies ApplicantStore;
+const reimbursements = {
+  listForUser: vi.fn(),
+  submit: vi.fn(),
+  review: vi.fn(),
+} satisfies ReimbursementStore;
 
 const EVENT_ID = "28ee870f-b0e1-45a8-a49d-d137a2700166";
 const ATTENDEE_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -47,6 +53,7 @@ const app = createApp({
   users: memberStore,
   events: eventStore,
   applicants,
+  reimbursements,
 });
 
 describe("admin API", () => {
@@ -263,6 +270,116 @@ describe("admin API", () => {
         .expect(409, {
           error: { code: "ALREADY_DECIDED", message: "Already reviewed" },
         });
+    });
+  });
+
+  describe("reimbursements", () => {
+    const REQUEST_ID = "7d1b2c3e-4f50-4a61-8b72-9c83d4e5f601";
+    const asExec = (req: request.Test) =>
+      req.set("Authorization", "Bearer exec-token");
+    const submit = () =>
+      asExec(request(app).post("/api/v2/admin/reimbursements"))
+        .field("item", "Pizza")
+        .field("amount", "42.50")
+        .field("category", "food")
+        .field("etransfer_email", "exec@ubcpmc.com")
+        .field("purchase_date", "2026-11-10");
+
+    it("lists only the signed-in exec's requests", async () => {
+      reimbursements.listForUser.mockResolvedValue([{ id: REQUEST_ID }]);
+      await asExec(request(app).get("/api/v2/admin/reimbursements")).expect(
+        200,
+        [{ id: REQUEST_ID }],
+      );
+      expect(reimbursements.listForUser).toHaveBeenCalledWith("u1");
+    });
+
+    it("submits a request with its receipt", async () => {
+      reimbursements.submit.mockResolvedValue({ id: REQUEST_ID });
+      await submit()
+        .attach("receipt", Buffer.from("%PDF-1.4"), {
+          filename: "receipt.pdf",
+          contentType: "application/pdf",
+        })
+        .expect(201, { id: REQUEST_ID });
+      expect(reimbursements.submit).toHaveBeenCalledWith(
+        "u1",
+        {
+          item: "Pizza",
+          amount: 42.5,
+          category: "food",
+          etransfer_email: "exec@ubcpmc.com",
+          purchase_date: "2026-11-10",
+          event_id: null,
+          notes: null,
+        },
+        expect.objectContaining({
+          mimetype: "application/pdf",
+          originalname: "receipt.pdf",
+        }),
+      );
+    });
+
+    it("needs a receipt that's an image or PDF", async () => {
+      const missing = await submit().expect(400);
+      expect(missing.body.error.message).toBe("Attach a receipt");
+      await submit()
+        .attach("receipt", Buffer.from("hi"), {
+          filename: "receipt.txt",
+          contentType: "text/plain",
+        })
+        .expect(400);
+      expect(reimbursements.submit).not.toHaveBeenCalled();
+    });
+
+    it.each(["0", "-5", "12.345", "abc"])(
+      "rejects %s as an amount",
+      async (amount) => {
+        await asExec(request(app).post("/api/v2/admin/reimbursements"))
+          .field("item", "Pizza")
+          .field("amount", amount)
+          .field("category", "food")
+          .field("etransfer_email", "exec@ubcpmc.com")
+          .attach("receipt", Buffer.from("%PDF"), {
+            filename: "r.pdf",
+            contentType: "application/pdf",
+          })
+          .expect(400);
+        expect(reimbursements.submit).not.toHaveBeenCalled();
+      },
+    );
+
+    it("reviews a request as the signed-in exec", async () => {
+      reimbursements.review.mockResolvedValue({ id: REQUEST_ID });
+      await asExec(
+        request(app).patch(`/api/v2/admin/reimbursements/${REQUEST_ID}`),
+      )
+        .send({ status: "approved", reviewer_note: " Looks good " })
+        .expect(200, { id: REQUEST_ID });
+      expect(reimbursements.review).toHaveBeenCalledWith(
+        REQUEST_ID,
+        "approved",
+        "u1",
+        "Looks good",
+      );
+    });
+
+    it("rejects review statuses that aren't decisions", async () => {
+      await asExec(
+        request(app).patch(`/api/v2/admin/reimbursements/${REQUEST_ID}`),
+      )
+        .send({ status: "submitted" })
+        .expect(400);
+      expect(reimbursements.review).not.toHaveBeenCalled();
+    });
+
+    it("keeps reimbursements behind admin auth", async () => {
+      await request(app).get("/api/v2/admin/reimbursements").expect(401);
+      await request(app)
+        .get("/api/v2/admin/reimbursements")
+        .set("Authorization", "Bearer outsider-token")
+        .expect(403);
+      expect(reimbursements.listForUser).not.toHaveBeenCalled();
     });
   });
 });

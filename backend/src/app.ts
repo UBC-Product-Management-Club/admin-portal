@@ -5,11 +5,12 @@ import { errorHandler, notFound } from "./middleware/error-handler.js";
 import { requireAdmin } from "./middleware/require-admin.js";
 import type { ApplicantStore } from "./lib/applicants.js";
 import type { EventStore } from "./lib/events.js";
+import type { ReimbursementStore } from "./lib/reimbursements.js";
 import type { VerifyToken } from "./lib/supabase.js";
 import type { UserStore } from "./lib/users.js";
 import { router as budget } from "./routes/budget.js";
 import { createEventsRouter } from "./routes/events.js";
-import { router as reimbursements } from "./routes/reimbursements.js";
+import { createReimbursementsRouter } from "./routes/reimbursements.js";
 import { createUsersRouter } from "./routes/users.js";
 
 type AppOptions = {
@@ -19,6 +20,7 @@ type AppOptions = {
   users: UserStore;
   events: EventStore;
   applicants: ApplicantStore;
+  reimbursements: ReimbursementStore;
 };
 
 export function createApp({
@@ -28,6 +30,7 @@ export function createApp({
   users,
   events,
   applicants,
+  reimbursements,
 }: AppOptions) {
   const app = express();
   app.use(cors({ origin: corsOrigins }));
@@ -41,7 +44,7 @@ export function createApp({
   admin.use(requireAdmin(verifyToken, adminEmailDomains));
   admin.use("/users", createUsersRouter(users));
   admin.use("/events", createEventsRouter(events, applicants));
-  admin.use("/reimbursements", reimbursements);
+  admin.use("/reimbursements", createReimbursementsRouter(reimbursements));
   admin.use("/budget", budget);
   app.use("/api/v2/admin", admin);
 

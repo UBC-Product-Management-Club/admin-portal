@@ -12,16 +12,16 @@ npm install
 npm run dev            # http://localhost:8000
 ```
 
-| Variable                    | Purpose                                                     |
-| --------------------------- | ----------------------------------------------------------- |
-| `PORT`                      | Port to listen on (Cloud Run sets this)                     |
-| `ORIGIN`                    | Local portal origin allowed by CORS                         |
-| `ADMIN_PORTAL_ORIGIN`       | Deployed portal origins allowed by CORS (comma-separated)   |
-| `SUPABASE_URL`              | Supabase project URL                                        |
-| `SUPABASE_ANON_KEY`         | Used to verify user JWTs                                    |
-| `SUPABASE_SERVICE_ROLE_KEY` | Database/storage access — server-side only, never commit    |
-| `SUPABASE_*_BUCKET_NAME`    | Storage buckets (event media, deliverables, attendee files) |
-| `ADMIN_EMAIL_DOMAINS`       | Email domains allowed to use the admin API                  |
+| Variable                    | Purpose                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
+| `PORT`                      | Port to listen on (Cloud Run sets this)                               |
+| `ORIGIN`                    | Local portal origin allowed by CORS                                   |
+| `ADMIN_PORTAL_ORIGIN`       | Deployed portal origins allowed by CORS (comma-separated)             |
+| `SUPABASE_URL`              | Supabase project URL                                                  |
+| `SUPABASE_ANON_KEY`         | Used to verify user JWTs                                              |
+| `SUPABASE_SERVICE_ROLE_KEY` | Database/storage access — server-side only, never commit              |
+| `SUPABASE_*_BUCKET_NAME`    | Storage buckets (event media, deliverables, attendee files, receipts) |
+| `ADMIN_EMAIL_DOMAINS`       | Email domains allowed to use the admin API                            |
 
 ## Layout
 
@@ -35,7 +35,8 @@ src/
   middleware/               requireAdmin, notFound, errorHandler
   lib/users.ts, events.ts   members list, events grid, event details, attendees
   lib/applicants.ts         applicant review, decisions go through accept_applicants / reject_applicants
-  routes/                   users, events, reimbursements, budget (stubs → 501, except members list, events grid, event details, attendees, applicants)
+  lib/reimbursements.ts     requests with receipts in the private receipts bucket; review can't be your own
+  routes/                   users, events, reimbursements, budget (stubs → 501, except members list, events grid, event details, attendees, applicants, reimbursements)
 ```
 
 ## Scripts
