@@ -10,7 +10,17 @@ const financeEmailList = z
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(8000),
   ORIGIN: z.url(),
-  ADMIN_PORTAL_ORIGIN: z.url().optional(),
+  // Comma-separated: the custom domain plus the frontend's Cloud Run URLs.
+  ADMIN_PORTAL_ORIGIN: z
+    .string()
+    .default("")
+    .transform((s) =>
+      s
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.url())),
   SUPABASE_URL: z.url().transform((u) => u.replace(/\/+$/, "")),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),

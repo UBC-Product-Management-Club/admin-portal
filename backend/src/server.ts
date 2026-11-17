@@ -12,9 +12,7 @@ const db = createAdminClient(env);
 
 const app = createApp({
   // Local portal dev server + deployed portal.
-  corsOrigins: [env.ORIGIN, env.ADMIN_PORTAL_ORIGIN].filter((o): o is string =>
-    Boolean(o),
-  ),
+  corsOrigins: [env.ORIGIN, ...env.ADMIN_PORTAL_ORIGIN],
   adminEmailDomains: env.ADMIN_EMAIL_DOMAINS,
   financeOperatorEmails: env.FINANCE_OPERATOR_EMAILS,
   financeAdminEmails: env.FINANCE_ADMIN_EMAILS,
