@@ -23,6 +23,11 @@ export default [
     route("applicants", "routes/applicants.tsx"),
     route("emails", "routes/emails.tsx"),
     route("reimbursements", "routes/reimbursements.tsx"),
+    route("reimbursements/new", "routes/reimbursements.new.tsx"),
+    route(
+      "reimbursements/:reimbursementId",
+      "routes/reimbursements.$reimbursementId.tsx",
+    ),
     route("budget", "routes/budget.tsx"),
   ]),
 ] satisfies RouteConfig;
