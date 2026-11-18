@@ -6,6 +6,7 @@ import { requireAdmin } from "./middleware/require-admin.js";
 import type { ApplicantStore } from "./lib/applicants.js";
 import type { EventStore } from "./lib/events.js";
 import type { SubmissionStore } from "./lib/submissions.js";
+import type { TeamStore } from "./lib/teams.js";
 import type { VerifyToken } from "./lib/supabase.js";
 import type { UserStore } from "./lib/users.js";
 import { router as budget } from "./routes/budget.js";
@@ -21,6 +22,7 @@ type AppOptions = {
   events: EventStore;
   applicants: ApplicantStore;
   submissions: SubmissionStore;
+  teams: TeamStore;
 };
 
 export function createApp({
@@ -31,6 +33,7 @@ export function createApp({
   events,
   applicants,
   submissions,
+  teams,
 }: AppOptions) {
   const app = express();
   app.use(cors({ origin: corsOrigins }));
@@ -43,7 +46,10 @@ export function createApp({
   const admin = express.Router();
   admin.use(requireAdmin(verifyToken, adminEmailDomains));
   admin.use("/users", createUsersRouter(users));
-  admin.use("/events", createEventsRouter(events, applicants, submissions));
+  admin.use(
+    "/events",
+    createEventsRouter(events, applicants, submissions, teams),
+  );
   admin.use("/reimbursements", reimbursements);
   admin.use("/budget", budget);
   app.use("/api/v2/admin", admin);

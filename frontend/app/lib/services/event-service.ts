@@ -12,6 +12,7 @@ import {
   type EventUpdatePayload,
 } from "~/lib/types/event";
 import { submissionListSchema } from "~/lib/types/submission";
+import { teamListSchema } from "~/lib/types/team";
 
 class EventService extends BaseService {
   async listEvents() {
@@ -33,6 +34,53 @@ class EventService extends BaseService {
     return (await this.client()).get(
       `${eventPath(eventId)}/submissions`,
       submissionListSchema,
+    );
+  }
+
+  async listTeams(eventId: string) {
+    return (await this.client()).get(
+      `${eventPath(eventId)}/teams`,
+      teamListSchema,
+    );
+  }
+
+  /** Null clears the close time, so teams stay open. */
+  async setTeamsCloseAt(eventId: string, closesAt: string | null) {
+    return (await this.client()).patch(
+      `${eventPath(eventId)}/teams/settings`,
+      teamListSchema,
+      { roster_locks_at: closesAt },
+    );
+  }
+
+  async createTeam(eventId: string, teamName: string, attendeeIds: string[]) {
+    return (await this.client()).post(
+      `${eventPath(eventId)}/teams`,
+      teamListSchema,
+      { team_name: teamName, attendee_ids: attendeeIds },
+    );
+  }
+
+  async renameTeam(eventId: string, teamId: string, teamName: string) {
+    return (await this.client()).patch(
+      teamPath(eventId, teamId),
+      teamListSchema,
+      { team_name: teamName },
+    );
+  }
+
+  /** Moves the attendee if they're already on another team. */
+  async addTeamMember(eventId: string, teamId: string, attendeeId: string) {
+    return (await this.client()).put(
+      memberPath(eventId, teamId, attendeeId),
+      teamListSchema,
+    );
+  }
+
+  async removeTeamMember(eventId: string, teamId: string, attendeeId: string) {
+    return (await this.client()).delete(
+      memberPath(eventId, teamId, attendeeId),
+      teamListSchema,
     );
   }
 
@@ -98,6 +146,14 @@ class EventService extends BaseService {
 
 function eventPath(eventId: string) {
   return `/events/${encodeURIComponent(eventId)}`;
+}
+
+function teamPath(eventId: string, teamId: string) {
+  return `${eventPath(eventId)}/teams/${encodeURIComponent(teamId)}`;
+}
+
+function memberPath(eventId: string, teamId: string, attendeeId: string) {
+  return `${teamPath(eventId, teamId)}/members/${encodeURIComponent(attendeeId)}`;
 }
 
 export const eventService = new EventService();

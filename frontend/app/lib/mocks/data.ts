@@ -8,6 +8,7 @@ import type {
   submissionFieldSchema,
   teamSubmissionSchema,
 } from "~/lib/types/submission";
+import type { eventTeamSchema, teamPersonSchema } from "~/lib/types/team";
 import type { StudyYear, University, userSchema } from "~/lib/types/user";
 
 /**
@@ -524,3 +525,26 @@ export const mockSubmissions: z.input<typeof teamSubmissionSchema>[] = [
     answers: {},
   },
 ];
+
+const TEAM_CODES = ["2N2CG", "8W9HN", "4WKPE"];
+
+/** The submission teams again, with join codes and attendee ids for editing. */
+export const mockTeams: z.input<typeof eventTeamSchema>[] = mockSubmissions.map(
+  (team, t) => ({
+    team_id: team.team_id,
+    team_name: team.team_name,
+    team_code: TEAM_CODES[t],
+    members: team.members.map((member, i) => ({
+      attendee_id: `att-${team.team_id}-${i}`,
+      ...member,
+    })),
+  }),
+);
+
+/** Attendees of the submission event who haven't joined a team. */
+export const mockTeamlessAttendees: z.input<typeof teamPersonSchema>[] =
+  mockUsers.slice(20, 26).map((user) => ({
+    attendee_id: `att-${user.user_id}`,
+    name: `${user.first_name} ${user.last_name}`,
+    email: user.email,
+  }));

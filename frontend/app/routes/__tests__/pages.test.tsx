@@ -351,6 +351,54 @@ describe("portal pages (mock data)", () => {
     ).toBeInTheDocument();
   });
 
+  it("event teams lets execs create, rename and edit teams", async () => {
+    const user = userEvent.setup();
+    renderPage(
+      "events/:eventId",
+      "/events/evt-02",
+      EventDetail,
+      eventDetailLoader,
+    );
+    await user.click(await screen.findByRole("tab", { name: "Teams" }));
+
+    expect(screen.getByText("2N2CG")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Not on a team (6)" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Remove Noah Tran from Pocket Planners",
+      }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Not on a team (7)" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: /Noah Tran/ }));
+    await user.type(
+      screen.getByRole("textbox", { name: "New team name" }),
+      "Night Owls",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Create team with 1" }),
+    );
+    expect(await screen.findByText("Night Owls")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Not on a team (6)" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Rename Night Owls" }));
+    const nameInput = screen.getByRole("textbox", { name: "Team name" });
+    await user.clear(nameInput);
+    await user.type(nameInput, "Campus Eats{Enter}");
+    expect(
+      await screen.findByText(
+        "Another team at this event already has that name",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("event submissions lists teams and exports them for judges", async () => {
     const user = userEvent.setup();
     renderPage(

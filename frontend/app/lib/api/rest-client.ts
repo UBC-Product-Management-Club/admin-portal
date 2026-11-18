@@ -42,6 +42,14 @@ export class RestClient implements ApiClient {
     return this.request("PATCH", path, schema, body);
   }
 
+  put<T extends z.ZodType>(path: string, schema: T) {
+    return this.request("PUT", path, schema);
+  }
+
+  delete<T extends z.ZodType>(path: string, schema: T) {
+    return this.request("DELETE", path, schema);
+  }
+
   private async request<T extends z.ZodType>(
     method: string,
     path: string,

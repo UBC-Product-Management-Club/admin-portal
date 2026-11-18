@@ -12,6 +12,8 @@ import {
   mockReimbursements,
   mockSubmissionFields,
   mockSubmissions,
+  mockTeamlessAttendees,
+  mockTeams,
   mockUsers,
   type RawEvent,
   type RawReimbursement,
@@ -19,7 +21,7 @@ import {
 import type { EventTrack, EventType } from "~/lib/types/event";
 import type { ReimbursementCategory } from "~/lib/types/reimbursement";
 
-type Method = "GET" | "POST" | "PATCH";
+type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 type Handler = (params: Record<string, string>, body?: RequestBody) => unknown;
 type Route = { method: Method; pattern: RegExp; handler: Handler };
 
@@ -35,6 +37,9 @@ export class MockClient implements ApiClient {
   private readonly registrations = structuredClone(mockRegistrations);
   private readonly reimbursements = structuredClone(mockReimbursements);
   private readonly applicants = structuredClone(mockApplicants);
+  private readonly teams = structuredClone(mockTeams);
+  private readonly teamless = structuredClone(mockTeamlessAttendees);
+  private readonly teamsCloseAt = new Map<string, string | null>();
 
   private readonly routes: Route[] = [
     this.route("GET", "/users", () => this.users),
@@ -126,6 +131,70 @@ export class MockClient implements ApiClient {
         teams: hasTeams ? mockSubmissions : [],
       };
     }),
+    this.route("GET", "/events/:eventId/teams", ({ eventId }) =>
+      this.toTeamList(eventId),
+    ),
+    // Before /teams/:teamId so "settings" isn't read as a team id.
+    this.route(
+      "PATCH",
+      "/events/:eventId/teams/settings",
+      ({ eventId }, body) => {
+        const { roster_locks_at } = body as { roster_locks_at: string | null };
+        this.teamsCloseAt.set(
+          this.findEvent(eventId).event_id,
+          roster_locks_at,
+        );
+        return this.toTeamList(eventId);
+      },
+    ),
+    this.route("POST", "/events/:eventId/teams", ({ eventId }, body) => {
+      const { team_name, attendee_ids } = body as {
+        team_name: string;
+        attendee_ids: string[];
+      };
+      this.requireTeamEvent(eventId);
+      this.assertNameFree(team_name);
+      const members = attendee_ids.map((id) => this.takePerson(id));
+      this.teams.push({
+        team_id: crypto.randomUUID(),
+        team_name,
+        team_code: Math.random().toString(36).slice(2, 7).toUpperCase(),
+        members,
+      });
+      return this.toTeamList(eventId);
+    }),
+    this.route(
+      "PATCH",
+      "/events/:eventId/teams/:teamId",
+      ({ eventId, teamId }, body) => {
+        const { team_name } = body as { team_name: string };
+        const team = this.findTeam(eventId, teamId);
+        if (team.team_name !== team_name) this.assertNameFree(team_name);
+        team.team_name = team_name;
+        return this.toTeamList(eventId);
+      },
+    ),
+    this.route(
+      "PUT",
+      "/events/:eventId/teams/:teamId/members/:attendeeId",
+      ({ eventId, teamId, attendeeId }) => {
+        const team = this.findTeam(eventId, teamId);
+        team.members.push(this.takePerson(attendeeId));
+        return this.toTeamList(eventId);
+      },
+    ),
+    this.route(
+      "DELETE",
+      "/events/:eventId/teams/:teamId/members/:attendeeId",
+      ({ eventId, teamId, attendeeId }) => {
+        const team = this.findTeam(eventId, teamId);
+        const index = team.members.findIndex(
+          (m) => m.attendee_id === attendeeId,
+        );
+        if (index !== -1) this.teamless.push(...team.members.splice(index, 1));
+        return this.toTeamList(eventId);
+      },
+    ),
     this.route("GET", "/events/:eventId/attendees", ({ eventId }) =>
       this.registrations
         .filter((r) => r.event_id === this.findEvent(eventId).event_id)
@@ -157,6 +226,14 @@ export class MockClient implements ApiClient {
 
   patch<T extends z.ZodType>(path: string, schema: T, body?: RequestBody) {
     return this.handle("PATCH", path, schema, body);
+  }
+
+  put<T extends z.ZodType>(path: string, schema: T) {
+    return this.handle("PUT", path, schema);
+  }
+
+  delete<T extends z.ZodType>(path: string, schema: T) {
+    return this.handle("DELETE", path, schema);
   }
 
   private async handle<T extends z.ZodType>(
@@ -201,6 +278,56 @@ export class MockClient implements ApiClient {
     const event = this.events.find((e) => e.event_id === eventId);
     if (!event) throw new ApiError(404, "NOT_FOUND", "Event not found");
     return event;
+  }
+
+  /** Only the submission event has teams; other events have none yet. */
+  private toTeamList(eventId: string) {
+    const event = this.findEvent(eventId);
+    const hasTeams = event.event_id === MOCK_SUBMISSION_EVENT_ID;
+    return {
+      event_id: event.event_id,
+      name: event.name,
+      min_team_size: 1,
+      max_team_size: 4,
+      roster_locks_at: this.teamsCloseAt.get(event.event_id) ?? null,
+      teams: hasTeams ? this.teams : [],
+      unassigned: hasTeams ? this.teamless : [],
+    };
+  }
+
+  private requireTeamEvent(eventId: string) {
+    if (this.findEvent(eventId).event_id !== MOCK_SUBMISSION_EVENT_ID) {
+      throw new ApiError(404, "NOT_FOUND", "Team not found");
+    }
+  }
+
+  private findTeam(eventId: string, teamId: string) {
+    this.requireTeamEvent(eventId);
+    const team = this.teams.find((t) => t.team_id === teamId);
+    if (!team) throw new ApiError(404, "NOT_FOUND", "Team not found");
+    return team;
+  }
+
+  private assertNameFree(teamName: string) {
+    const taken = this.teams.some(
+      (t) => t.team_name.toLowerCase() === teamName.toLowerCase(),
+    );
+    if (taken) {
+      throw new ApiError(
+        409,
+        "TEAM_NAME_TAKEN",
+        "Another team at this event already has that name",
+      );
+    }
+  }
+
+  /** Pulls an attendee off whatever team (or the teamless list) they're on. */
+  private takePerson(attendeeId: string) {
+    for (const list of [this.teamless, ...this.teams.map((t) => t.members)]) {
+      const index = list.findIndex((p) => p.attendee_id === attendeeId);
+      if (index !== -1) return list.splice(index, 1)[0];
+    }
+    throw new ApiError(404, "NOT_FOUND", "Attendee not found");
   }
 
   private toEvent(event: RawEvent) {

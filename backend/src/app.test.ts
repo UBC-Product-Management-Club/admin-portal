@@ -6,6 +6,7 @@ import { HttpError } from "./lib/http-error.js";
 import type { ApplicantStore } from "./lib/applicants.js";
 import type { EventStore } from "./lib/events.js";
 import type { SubmissionStore } from "./lib/submissions.js";
+import type { TeamStore } from "./lib/teams.js";
 import type { AuthUser, VerifyToken } from "./lib/supabase.js";
 import type { UserStore } from "./lib/users.js";
 
@@ -37,6 +38,14 @@ const applicants = {
   setPaymentDue: vi.fn(),
 } satisfies ApplicantStore;
 const submissions = { listSubmissions: vi.fn() } satisfies SubmissionStore;
+const teams = {
+  listTeams: vi.fn(),
+  setRosterLock: vi.fn(),
+  createTeam: vi.fn(),
+  renameTeam: vi.fn(),
+  addMember: vi.fn(),
+  removeMember: vi.fn(),
+} satisfies TeamStore;
 
 const EVENT_ID = "28ee870f-b0e1-45a8-a49d-d137a2700166";
 const ATTENDEE_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -50,6 +59,7 @@ const app = createApp({
   events: eventStore,
   applicants,
   submissions,
+  teams,
 });
 
 describe("admin API", () => {
@@ -157,6 +167,7 @@ describe("admin API", () => {
     `/events/${EVENT_ID}`,
     `/events/${EVENT_ID}/attendees`,
     `/events/${EVENT_ID}/submissions`,
+    `/events/${EVENT_ID}/teams`,
   ])("keeps %s behind admin auth", async (path) => {
     await request(app).get(`/api/v2/admin${path}`).expect(401);
     await request(app)
@@ -168,6 +179,79 @@ describe("admin API", () => {
     expect(eventStore.getEvent).not.toHaveBeenCalled();
     expect(eventStore.listAttendees).not.toHaveBeenCalled();
     expect(submissions.listSubmissions).not.toHaveBeenCalled();
+    expect(teams.listTeams).not.toHaveBeenCalled();
+  });
+
+  describe("teams", () => {
+    const TEAM_ID = "0b7c1a52-6a1e-4f43-9a0e-1c8e2a6f1d11";
+    const TEAMS_PATH = `/api/v2/admin/events/${EVENT_ID}/teams`;
+    const asExec = (req: request.Test) =>
+      req.set("Authorization", "Bearer exec-token");
+
+    beforeEach(() => {
+      for (const fn of Object.values(teams)) {
+        fn.mockResolvedValue({ event_id: EVENT_ID });
+      }
+    });
+
+    it("lists an event's teams", async () => {
+      await asExec(request(app).get(TEAMS_PATH)).expect(200, {
+        event_id: EVENT_ID,
+      });
+      expect(teams.listTeams).toHaveBeenCalledWith(EVENT_ID);
+    });
+
+    it("sets and clears when teams close", async () => {
+      const locksAt = "2026-11-28T23:59:00-08:00";
+      await asExec(request(app).patch(`${TEAMS_PATH}/settings`))
+        .send({ roster_locks_at: locksAt })
+        .expect(200);
+      expect(teams.setRosterLock).toHaveBeenCalledWith(EVENT_ID, locksAt);
+
+      await asExec(request(app).patch(`${TEAMS_PATH}/settings`))
+        .send({ roster_locks_at: null })
+        .expect(200);
+      expect(teams.setRosterLock).toHaveBeenLastCalledWith(EVENT_ID, null);
+    });
+
+    it("rejects a close time that isn't a date", async () => {
+      await asExec(request(app).patch(`${TEAMS_PATH}/settings`))
+        .send({ roster_locks_at: "Friday" })
+        .expect(400);
+      expect(teams.setRosterLock).not.toHaveBeenCalled();
+    });
+
+    it("creates a team with a trimmed name", async () => {
+      await asExec(request(app).post(TEAMS_PATH))
+        .send({ team_name: "  Alpha ", attendee_ids: [ATTENDEE_ID] })
+        .expect(201);
+      expect(teams.createTeam).toHaveBeenCalledWith(EVENT_ID, "Alpha", [
+        ATTENDEE_ID,
+      ]);
+    });
+
+    it("rejects a blank team name", async () => {
+      await asExec(request(app).patch(`${TEAMS_PATH}/${TEAM_ID}`))
+        .send({ team_name: "   " })
+        .expect(400);
+      expect(teams.renameTeam).not.toHaveBeenCalled();
+    });
+
+    it("adds and removes members", async () => {
+      const memberPath = `${TEAMS_PATH}/${TEAM_ID}/members/${ATTENDEE_ID}`;
+      await asExec(request(app).put(memberPath)).expect(200);
+      expect(teams.addMember).toHaveBeenCalledWith(
+        EVENT_ID,
+        TEAM_ID,
+        ATTENDEE_ID,
+      );
+      await asExec(request(app).delete(memberPath)).expect(200);
+      expect(teams.removeMember).toHaveBeenCalledWith(
+        EVENT_ID,
+        TEAM_ID,
+        ATTENDEE_ID,
+      );
+    });
   });
 
   describe("applicants", () => {

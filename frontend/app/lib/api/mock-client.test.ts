@@ -6,6 +6,7 @@ import {
   reimbursementListSchema,
   reimbursementSchema,
 } from "~/lib/types/reimbursement";
+import { teamListSchema } from "~/lib/types/team";
 import { userListSchema } from "~/lib/types/user";
 
 describe("MockClient", () => {
@@ -30,6 +31,21 @@ describe("MockClient", () => {
       new Set(["submitted", "approved", "paid", "rejected"]),
     );
     expect(users[0]).toHaveProperty("firstName");
+  });
+
+  it("moves an attendee between teams instead of copying them", async () => {
+    const before = await client.get("/events/evt-02/teams", teamListSchema);
+    const [from, to] = before.teams;
+    const mover = from.members[0];
+
+    const after = await client.put(
+      `/events/evt-02/teams/${to.teamId}/members/${mover.attendeeId}`,
+      teamListSchema,
+    );
+    const onTeams = after.teams.map((t) =>
+      t.members.some((m) => m.attendeeId === mover.attendeeId),
+    );
+    expect(onTeams).toEqual([false, true, false]);
   });
 
   it("applies PATCH changes to an event", async () => {
