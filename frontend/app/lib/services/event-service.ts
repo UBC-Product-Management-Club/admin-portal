@@ -11,6 +11,7 @@ import {
   eventSchema,
   type EventUpdatePayload,
 } from "~/lib/types/event";
+import { submissionListSchema } from "~/lib/types/submission";
 
 class EventService extends BaseService {
   async listEvents() {
@@ -25,6 +26,13 @@ class EventService extends BaseService {
     return (await this.client()).get(
       `${eventPath(eventId)}/attendees`,
       attendeeListSchema,
+    );
+  }
+
+  async listSubmissions(eventId: string) {
+    return (await this.client()).get(
+      `${eventPath(eventId)}/submissions`,
+      submissionListSchema,
     );
   }
 

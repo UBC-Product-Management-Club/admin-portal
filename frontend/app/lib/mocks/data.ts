@@ -4,6 +4,10 @@ import type { applicantSchema, reviewEventSchema } from "~/lib/types/applicant";
 import type { attendeeSchema } from "~/lib/types/attendee";
 import type { eventSchema } from "~/lib/types/event";
 import type { reimbursementSchema } from "~/lib/types/reimbursement";
+import type {
+  submissionFieldSchema,
+  teamSubmissionSchema,
+} from "~/lib/types/submission";
 import type { StudyYear, University, userSchema } from "~/lib/types/user";
 
 /**
@@ -459,5 +463,64 @@ export const mockApplicants: z.input<typeof applicantSchema>[] = [
     reviewed_at: "2026-11-04T02:00:00Z",
     payment_due_at: "2026-11-07T07:00:00Z",
     answers: mockAnswers("I want to get better at case interviews."),
+  },
+];
+
+export const MOCK_SUBMISSION_EVENT_ID = "evt-02";
+
+export const mockSubmissionFields: z.input<typeof submissionFieldSchema>[] = [
+  { id: "deck", label: "Slide deck", type: "file" },
+  { id: "prototype", label: "Prototype / demo link", type: "url" },
+  { id: "video", label: "Video link", type: "url" },
+  {
+    id: "description",
+    label: "Short product description",
+    type: "long-answer",
+  },
+];
+
+export const mockSubmissions: z.input<typeof teamSubmissionSchema>[] = [
+  {
+    team_id: "team-01",
+    team_name: "Pocket Planners",
+    is_finalist: true,
+    members: [
+      { name: "Maya Singh", email: "maya.singh@example.ca" },
+      { name: "Noah Tran", email: "noah.tran@example.ca" },
+    ],
+    submitted_at: "2026-02-20T06:45:00Z",
+    answers: {
+      deck: ["https://example.com/pocket-planners.pdf"],
+      prototype: ["https://example.com/pocket-planners-demo"],
+      video: ["https://youtu.be/example1"],
+      description: [
+        "A budgeting app that splits shared costs, like rent, between roommates.",
+      ],
+    },
+  },
+  {
+    team_id: "team-02",
+    team_name: "Campus Eats",
+    is_finalist: false,
+    members: [
+      { name: "Ella Wong", email: "ella.wong@example.ca" },
+      { name: "Leo Park", email: "leo.park@example.ca" },
+      { name: "Priya Patel", email: "priya.patel@example.ca" },
+    ],
+    submitted_at: "2026-02-19T22:10:00Z",
+    answers: {
+      deck: ["https://example.com/campus-eats.pdf"],
+      prototype: ["https://example.com/campus-eats-demo"],
+      video: ["https://youtu.be/example2"],
+      description: ["Pre-order food on campus and skip the lunch line."],
+    },
+  },
+  {
+    team_id: "team-03",
+    team_name: "Study Buddies",
+    is_finalist: false,
+    members: [{ name: "Kai Nguyen", email: "kai.nguyen@example.ca" }],
+    submitted_at: null,
+    answers: {},
   },
 ];
