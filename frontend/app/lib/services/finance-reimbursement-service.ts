@@ -11,7 +11,10 @@ import {
 
 class FinanceReimbursementService extends BaseService {
   async getSettings() {
-    return (await this.client()).get("/finance/settings", reimbursementConfigSchema);
+    return (await this.client()).get(
+      "/finance/settings",
+      reimbursementConfigSchema,
+    );
   }
 
   async updateInstructions(content: string) {

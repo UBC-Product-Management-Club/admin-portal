@@ -53,7 +53,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
         (event) =>
           event.eventId === request.eventId ||
           schoolYearOf(event.startTime) ===
-          schoolYearOf(new Date().toISOString()),
+            schoolYearOf(new Date().toISOString()),
       )
       .map(({ eventId, name }) => ({ eventId, name })),
   };
@@ -140,7 +140,8 @@ export default function ReimbursementDetail({
         {loaderData.config.instruction && (
           <details className="rounded-lg border border-divider bg-muted/30 p-3 text-sm">
             <summary className="flex cursor-pointer list-none items-center gap-2 font-medium text-accent-foreground">
-              <CircleHelp className="size-4" /> Instructions for Submitting Receipts
+              <CircleHelp className="size-4" /> Instructions for Submitting
+              Receipts
             </summary>
             <p className="mt-3 leading-relaxed text-muted-foreground">
               {loaderData.config.instruction.content}
@@ -325,7 +326,10 @@ export default function ReimbursementDetail({
                 Add files
               </Button>
               {files.length > 0 && (
-                <ul className="mt-3 flex flex-col gap-2" aria-label="New uploads">
+                <ul
+                  className="mt-3 flex flex-col gap-2"
+                  aria-label="New uploads"
+                >
                   {files.map((file, index) => (
                     <li
                       key={`${file.name}-${index}`}

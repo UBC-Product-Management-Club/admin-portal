@@ -11,13 +11,176 @@ import { financeReimbursementService } from "~/lib/services/finance-reimbursemen
 import type { ReimbursementStatus } from "~/lib/types/reimbursement";
 import type { Route } from "./+types/finance.reimbursements.$reimbursementId";
 
-const STATUS: Record<ReimbursementStatus, { label: string; tone: ChipTone }> = { pending: { label: "Pending", tone: "warning" }, in_transit: { label: "In Transit", tone: "accent" }, complete: { label: "Complete", tone: "success" }, needs_changes: { label: "Needs Changes", tone: "warning" }, rejected: { label: "Rejected", tone: "neutral" } };
-export async function clientLoader({ params }: Route.ClientLoaderArgs) { if (!params.reimbursementId) throw new Response("Not found", { status: 404 }); return { ticket: await financeReimbursementService.getTicket(params.reimbursementId) }; }
-export function ErrorBoundary() { return <RouteError />; }
+const STATUS: Record<ReimbursementStatus, { label: string; tone: ChipTone }> = {
+  pending: { label: "Pending", tone: "warning" },
+  in_transit: { label: "In Transit", tone: "accent" },
+  complete: { label: "Complete", tone: "success" },
+  needs_changes: { label: "Needs Changes", tone: "warning" },
+  rejected: { label: "Rejected", tone: "neutral" },
+};
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  if (!params.reimbursementId) throw new Response("Not found", { status: 404 });
+  return {
+    ticket: await financeReimbursementService.getTicket(params.reimbursementId),
+  };
+}
+export function ErrorBoundary() {
+  return <RouteError />;
+}
 
 export default function FinanceTicket({ loaderData }: Route.ComponentProps) {
-  const [ticket, setTicket] = useState(loaderData.ticket); const [selectedStatus, setSelectedStatus] = useState<ReimbursementStatus>(loaderData.ticket.status); const [saving, setSaving] = useState(false); const [message, setMessage] = useState<string | null>(null); const chip = STATUS[ticket.status]; const needsReason = selectedStatus === "needs_changes" || selectedStatus === "rejected";
-  async function update(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); const status = String(form.get("status")) as ReimbursementStatus; const reason = String(form.get("reason") ?? "").trim() || null; if (["needs_changes", "rejected"].includes(status) && !reason) return setMessage("A reason is required for Needs Changes or Rejected."); setSaving(true); setMessage(null); try { const updatedTicket = await financeReimbursementService.updateStatus(ticket.id, { status, reason }); setTicket(updatedTicket); setSelectedStatus(updatedTicket.status); setMessage("Status updated."); } catch { setMessage("Couldn’t update this ticket."); } finally { setSaving(false); } }
-  return <div className="mx-auto flex w-full max-w-[980px] flex-col gap-6"><Link to="/finance/reimbursements" className="flex w-fit items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> All finance tickets</Link><PageHeader title={ticket.item} description={`${formatCurrency(ticket.amount)} · Submitted ${formatShortDate(ticket.createdAt)}`} actions={<StatusChip tone={chip.tone}>{chip.label}</StatusChip>} /><div className="grid gap-5 lg:grid-cols-[1fr_320px]"><section className="card-surface flex flex-col gap-5 p-6"><h2 className="text-lg font-semibold">Expense details</h2><dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm"><Detail label="Department" value={ticket.department.label} /><Detail label="Category" value={`${ticket.category.label} · ${ticket.category.glCode}`} /><Detail label="Event" value={ticket.eventName ?? "No related event"} /><Detail label="Purchase date" value={ticket.purchaseDate ? formatDate(ticket.purchaseDate) : "—"} /><Detail label="Vendor" value={ticket.vendor ?? "—"} /><Detail label="Reference" value={ticket.vendorReference ?? "—"} /><Detail label="E-transfer name" value={ticket.etransferFullName ?? "—"} /><Detail label="E-transfer email" value={ticket.etransferEmail} /></dl>{ticket.notes && <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{ticket.notes}</p>}<div><h3 className="mb-3 font-semibold">Receipts</h3><ul className="grid gap-2 sm:grid-cols-2">{ticket.attachments.map((file) => <li key={file.id}><a href={file.url ?? undefined} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-divider p-3 text-sm font-medium hover:bg-hover"><FileText className="size-4" /><span className="min-w-0 flex-1 truncate">{file.originalFilename}</span><ExternalLink className="size-4" /></a></li>)}</ul></div></section><form onSubmit={update} className="card-surface flex h-fit flex-col gap-4 p-6"><h2 className="text-lg font-semibold">Update status</h2><label className="flex flex-col gap-1 text-sm font-medium">Status<select name="status" value={selectedStatus} onChange={(event) => setSelectedStatus(event.target.value as ReimbursementStatus)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">{Object.entries(STATUS).map(([value, item]) => <option key={value} value={value}>{item.label}</option>)}</select></label>{needsReason && <label className="flex flex-col gap-1 text-sm font-medium">Reason <span className="font-normal text-muted-foreground">(Required for Needs Changes or Rejected)</span><textarea key={selectedStatus} name="reason" defaultValue={ticket.statusReason ?? ""} className="min-h-24 rounded-md border border-input bg-background p-3 text-sm" /></label>}{message && <p className="text-sm text-muted-foreground">{message}</p>}<Button disabled={saving}>{saving && <Loader2 className="animate-spin" />} {saving ? "Saving…" : "Save status"}</Button></form></div></div>;
+  const [ticket, setTicket] = useState(loaderData.ticket);
+  const [selectedStatus, setSelectedStatus] = useState<ReimbursementStatus>(
+    loaderData.ticket.status,
+  );
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const chip = STATUS[ticket.status];
+  const needsReason =
+    selectedStatus === "needs_changes" || selectedStatus === "rejected";
+  async function update(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const status = String(form.get("status")) as ReimbursementStatus;
+    const reason = String(form.get("reason") ?? "").trim() || null;
+    if (["needs_changes", "rejected"].includes(status) && !reason)
+      return setMessage("A reason is required for Needs Changes or Rejected.");
+    setSaving(true);
+    setMessage(null);
+    try {
+      const updatedTicket = await financeReimbursementService.updateStatus(
+        ticket.id,
+        { status, reason },
+      );
+      setTicket(updatedTicket);
+      setSelectedStatus(updatedTicket.status);
+      setMessage("Status updated.");
+    } catch {
+      setMessage("Couldn’t update this ticket.");
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <div className="mx-auto flex w-full max-w-[980px] flex-col gap-6">
+      <Link
+        to="/finance/reimbursements"
+        className="flex w-fit items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" /> All finance tickets
+      </Link>
+      <PageHeader
+        title={ticket.item}
+        description={`${formatCurrency(ticket.amount)} · Submitted ${formatShortDate(ticket.createdAt)}`}
+        actions={<StatusChip tone={chip.tone}>{chip.label}</StatusChip>}
+      />
+      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+        <section className="card-surface flex flex-col gap-5 p-6">
+          <h2 className="text-lg font-semibold">Expense details</h2>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+            <Detail label="Department" value={ticket.department.label} />
+            <Detail
+              label="Category"
+              value={`${ticket.category.label} · ${ticket.category.glCode}`}
+            />
+            <Detail
+              label="Event"
+              value={ticket.eventName ?? "No related event"}
+            />
+            <Detail
+              label="Purchase date"
+              value={
+                ticket.purchaseDate ? formatDate(ticket.purchaseDate) : "—"
+              }
+            />
+            <Detail label="Vendor" value={ticket.vendor ?? "—"} />
+            <Detail label="Reference" value={ticket.vendorReference ?? "—"} />
+            <Detail
+              label="E-transfer name"
+              value={ticket.etransferFullName ?? "—"}
+            />
+            <Detail label="E-transfer email" value={ticket.etransferEmail} />
+          </dl>
+          {ticket.notes && (
+            <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+              {ticket.notes}
+            </p>
+          )}
+          <div>
+            <h3 className="mb-3 font-semibold">Receipts</h3>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {ticket.attachments.map((file) => (
+                <li key={file.id}>
+                  <a
+                    href={file.url ?? undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-divider p-3 text-sm font-medium hover:bg-hover"
+                  >
+                    <FileText className="size-4" />
+                    <span className="min-w-0 flex-1 truncate">
+                      {file.originalFilename}
+                    </span>
+                    <ExternalLink className="size-4" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+        <form
+          onSubmit={update}
+          className="card-surface flex h-fit flex-col gap-4 p-6"
+        >
+          <h2 className="text-lg font-semibold">Update status</h2>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Status
+            <select
+              name="status"
+              value={selectedStatus}
+              onChange={(event) =>
+                setSelectedStatus(event.target.value as ReimbursementStatus)
+              }
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {Object.entries(STATUS).map(([value, item]) => (
+                <option key={value} value={value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {needsReason && (
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Reason{" "}
+              <span className="font-normal text-muted-foreground">
+                (Required for Needs Changes or Rejected)
+              </span>
+              <textarea
+                key={selectedStatus}
+                name="reason"
+                defaultValue={ticket.statusReason ?? ""}
+                className="min-h-24 rounded-md border border-input bg-background p-3 text-sm"
+              />
+            </label>
+          )}
+          {message && (
+            <p className="text-sm text-muted-foreground">{message}</p>
+          )}
+          <Button disabled={saving}>
+            {saving && <Loader2 className="animate-spin" />}{" "}
+            {saving ? "Saving…" : "Save status"}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
 }
-function Detail({ label, value }: { label: string; value: string }) { return <div><dt className="text-xs font-medium text-muted-foreground">{label}</dt><dd className="mt-1 break-words">{value}</dd></div>; }
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className="mt-1 break-words">{value}</dd>
+    </div>
+  );
+}

@@ -90,19 +90,30 @@ export class MockClient implements ApiClient {
       const input = body as { label: string; gl_code: string };
       const category = {
         id: `cat-${crypto.randomUUID()}`,
-        slug: input.label.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""),
+        slug: input.label
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, ""),
         label: input.label.trim(),
         gl_code: input.gl_code.trim(),
       };
       mockReimbursementConfig.categories.push(category);
       return category;
     }),
-    this.route("PATCH", "/finance/settings/categories/:categoryId/archive", ({ categoryId }) => {
-      const index = mockReimbursementConfig.categories.findIndex((category) => category.id === categoryId);
-      if (index < 0) throw new ApiError(404, "NOT_FOUND", "Expense category not found");
-      mockReimbursementConfig.categories.splice(index, 1);
-      return { ok: true };
-    }),
+    this.route(
+      "PATCH",
+      "/finance/settings/categories/:categoryId/archive",
+      ({ categoryId }) => {
+        const index = mockReimbursementConfig.categories.findIndex(
+          (category) => category.id === categoryId,
+        );
+        if (index < 0)
+          throw new ApiError(404, "NOT_FOUND", "Expense category not found");
+        mockReimbursementConfig.categories.splice(index, 1);
+        return { ok: true };
+      },
+    ),
     this.route(
       "PATCH",
       "/events/:eventId/applicants/:attendeeId/payment-due",
@@ -391,7 +402,7 @@ export class MockClient implements ApiClient {
     if (
       request.attachments.filter((attachment) => !removed.has(attachment.id))
         .length +
-      additions.length <
+        additions.length <
       1
     ) {
       throw new ApiError(

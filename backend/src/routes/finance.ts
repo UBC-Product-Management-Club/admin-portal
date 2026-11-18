@@ -16,14 +16,18 @@ import {
 const reimbursementParams = z.object({ reimbursementId: z.string().uuid() });
 const categoryParams = z.object({ categoryId: z.string().uuid() });
 const filtersSchema = z.object({
-  status: z.enum(["pending", "in_transit", "complete", "needs_changes", "rejected"]).optional(),
+  status: z
+    .enum(["pending", "in_transit", "complete", "needs_changes", "rejected"])
+    .optional(),
   department_id: z.string().uuid().optional(),
   event_id: z.string().uuid().optional(),
 });
 
 export function createFinanceRouter(reimbursements: ReimbursementStore) {
   const router = Router();
-  router.get("/access", (_req, res) => res.json({ role: res.locals.financeRole }));
+  router.get("/access", (_req, res) =>
+    res.json({ role: res.locals.financeRole }),
+  );
   router.get("/settings", async (_req, res) => {
     res.json(await reimbursements.getFormConfig());
   });
@@ -36,11 +40,13 @@ export function createFinanceRouter(reimbursements: ReimbursementStore) {
     );
   });
   router.post("/settings/categories", async (req, res) => {
-    res.status(201).json(
-      await reimbursements.createFinanceCategory(
-        financeCategoryInputSchema.parse(req.body),
-      ),
-    );
+    res
+      .status(201)
+      .json(
+        await reimbursements.createFinanceCategory(
+          financeCategoryInputSchema.parse(req.body),
+        ),
+      );
   });
   router.patch("/settings/categories/:categoryId/archive", async (req, res) => {
     const { categoryId } = categoryParams.parse(req.params);

@@ -97,7 +97,9 @@ export type FinanceStatusInput = z.output<typeof financeStatusInputSchema>;
 export const financeInstructionInputSchema = z.object({
   content: z.string().trim().min(1).max(5_000),
 });
-export type FinanceInstructionInput = z.output<typeof financeInstructionInputSchema>;
+export type FinanceInstructionInput = z.output<
+  typeof financeInstructionInputSchema
+>;
 export const financeCategoryInputSchema = z.object({
   label: z.string().trim().min(1).max(160),
   gl_code: z.string().trim().min(1).max(32),
@@ -461,14 +463,22 @@ export function createReimbursementStore(
     async getForFinance(reimbursementId) {
       const rows = await getRowsForFinance({}, reimbursementId);
       if (rows.length === 0)
-        throw new HttpError(404, "NOT_FOUND", "Reimbursement request not found");
+        throw new HttpError(
+          404,
+          "NOT_FOUND",
+          "Reimbursement request not found",
+        );
       return (await serializeRows(rows))[0];
     },
     async updateFinanceStatus(reimbursementId, actorId, input) {
       const current = await getRowsForFinance({}, reimbursementId);
       const ticket = current[0];
       if (!ticket)
-        throw new HttpError(404, "NOT_FOUND", "Reimbursement request not found");
+        throw new HttpError(
+          404,
+          "NOT_FOUND",
+          "Reimbursement request not found",
+        );
       const reason = input.reason?.trim() || null;
       const { error } = await db
         .from("Reimbursement")
@@ -479,7 +489,10 @@ export function createReimbursementStore(
         })
         .eq("reimbursement_id", reimbursementId);
       if (error) throw error;
-      if (ticket.workflow_status !== input.status || ticket.workflow_reason !== reason) {
+      if (
+        ticket.workflow_status !== input.status ||
+        ticket.workflow_reason !== reason
+      ) {
         const { error: eventError } = await db
           .from("ReimbursementStatusEvent")
           .insert({
@@ -522,7 +535,11 @@ export function createReimbursementStore(
         .replace(/[^a-z0-9]+/g, "_")
         .replace(/^_+|_+$/g, "");
       if (!slug)
-        throw new HttpError(400, "INVALID_CATEGORY", "Enter a valid category name");
+        throw new HttpError(
+          400,
+          "INVALID_CATEGORY",
+          "Enter a valid category name",
+        );
       const { data: lastCategory, error: lastCategoryError } = await db
         .from("ReimbursementCategory")
         .select("sort_order")

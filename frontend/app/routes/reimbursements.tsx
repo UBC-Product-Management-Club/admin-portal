@@ -1,4 +1,10 @@
-import { ChevronRight, CircleHelp, Loader2, Trash2, Upload } from "lucide-react";
+import {
+  ChevronRight,
+  CircleHelp,
+  Loader2,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useId, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 
@@ -126,10 +132,7 @@ export default function Reimbursements({ loaderData }: Route.ComponentProps) {
             {requests.map((request) => {
               const chip = STATUS_CHIPS[request.status];
               return (
-                <li
-                  key={request.id}
-                  className="py-1.5"
-                >
+                <li key={request.id} className="py-1.5">
                   <Link
                     to={`/reimbursements/${request.id}`}
                     aria-label={`View ${request.item} reimbursement request`}
@@ -140,8 +143,8 @@ export default function Reimbursements({ loaderData }: Route.ComponentProps) {
                         {request.item}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {request.eventName ?? request.department.label} · Submitted{" "}
-                        {formatShortDate(request.createdAt)}
+                        {request.eventName ?? request.department.label} ·
+                        Submitted {formatShortDate(request.createdAt)}
                       </span>
                       <span className="mt-1 flex items-center gap-0.5 text-xs font-medium text-accent-foreground">
                         View request <ChevronRight className="size-3.5" />
@@ -239,7 +242,8 @@ export function RequestForm({
         {config.instruction && (
           <details className="relative text-sm">
             <summary className="flex cursor-pointer list-none items-center gap-1 font-medium text-accent-foreground">
-              <CircleHelp className="size-4" /> Instructions for Submitting Receipts
+              <CircleHelp className="size-4" /> Instructions for Submitting
+              Receipts
             </summary>
             <p className="absolute right-0 z-10 mt-2 w-80 rounded-lg border border-divider bg-background p-3 text-xs leading-relaxed text-muted-foreground shadow-lg">
               {config.instruction.content}
@@ -395,7 +399,9 @@ export function RequestForm({
                   type="button"
                   onClick={() =>
                     setFiles((current) =>
-                      current.filter((_, currentIndex) => currentIndex !== index),
+                      current.filter(
+                        (_, currentIndex) => currentIndex !== index,
+                      ),
                     )
                   }
                   className="flex shrink-0 items-center gap-1 text-xs font-medium text-destructive hover:underline"
