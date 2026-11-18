@@ -17,6 +17,11 @@ export interface ApiClient {
     schema: T,
     body?: RequestBody,
   ): Promise<z.output<T>>;
+  put<T extends z.ZodType>(
+    path: string,
+    schema: T,
+    body?: RequestBody,
+  ): Promise<z.output<T>>;
 }
 
 let client: ApiClient | undefined;

@@ -31,7 +31,14 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
   },
   {
     heading: "Finance",
-    items: [{ to: "/reimbursements", label: "Reimbursements", icon: Receipt }],
+    items: [
+      { to: "/reimbursements", label: "Reimbursements", icon: Receipt },
+      {
+        to: "/finance/reimbursements",
+        label: "Finance Dashboard",
+        icon: ClipboardCheck,
+      },
+    ],
   },
 ];
 

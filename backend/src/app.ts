@@ -11,7 +11,7 @@ import type { VerifyToken } from "./lib/supabase.js";
 import type { UserStore } from "./lib/users.js";
 import { router as budget } from "./routes/budget.js";
 import { createEventsRouter } from "./routes/events.js";
-import { router as finance } from "./routes/finance.js";
+import { createFinanceRouter } from "./routes/finance.js";
 import { createReimbursementsRouter } from "./routes/reimbursements.js";
 import { createUsersRouter } from "./routes/users.js";
 
@@ -55,7 +55,7 @@ export function createApp({
   admin.use(
     "/finance",
     requireFinance(financeOperatorEmails, financeAdminEmails),
-    finance,
+    createFinanceRouter(reimbursements),
   );
   app.use("/api/v2/admin", admin);
 

@@ -28,6 +28,12 @@ export default [
       "reimbursements/:reimbursementId",
       "routes/reimbursements.$reimbursementId.tsx",
     ),
+    route("finance/reimbursements", "routes/finance.reimbursements.tsx"),
+    route("finance/settings", "routes/finance.settings.tsx"),
+    route(
+      "finance/reimbursements/:reimbursementId",
+      "routes/finance.reimbursements.$reimbursementId.tsx",
+    ),
     route("budget", "routes/budget.tsx"),
   ]),
 ] satisfies RouteConfig;

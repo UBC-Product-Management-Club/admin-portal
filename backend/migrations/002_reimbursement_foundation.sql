@@ -57,11 +57,13 @@ on conflict (slug) do nothing;
 insert into public."ReimbursementDepartment" (slug, label, sort_order)
 values
   ('events', 'Events', 10),
-  ('tech', 'Tech', 20),
-  ('media', 'Media', 30),
-  ('design', 'Design', 40),
-  ('partnerships', 'Partnerships', 50),
-  ('finance', 'Finance', 60)
+  ('community', 'Community', 20),
+  ('tech', 'Tech', 30),
+  ('media', 'Media', 40),
+  ('design', 'Design', 50),
+  ('partnerships', 'Partnerships', 60),
+  ('finance', 'Finance', 70),
+  ('exec_dev', 'Exec-dev', 80)
 on conflict (slug) do nothing;
 
 insert into public."ReimbursementInstruction" (reimbursement_instruction_id, content)

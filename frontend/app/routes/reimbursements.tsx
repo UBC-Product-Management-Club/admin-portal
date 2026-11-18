@@ -1,4 +1,4 @@
-import { CircleHelp, Loader2, Trash2, Upload } from "lucide-react";
+import { ChevronRight, CircleHelp, Loader2, Trash2, Upload } from "lucide-react";
 import { useId, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 
@@ -28,9 +28,9 @@ const STATUS_CHIPS: Record<
   { label: string; tone: ChipTone }
 > = {
   pending: { label: "Pending", tone: "warning" },
-  in_transit: { label: "In transit", tone: "accent" },
+  in_transit: { label: "In Transit", tone: "accent" },
   complete: { label: "Complete", tone: "success" },
-  needs_changes: { label: "Needs changes", tone: "warning" },
+  needs_changes: { label: "Needs Changes", tone: "warning" },
   rejected: { label: "Rejected", tone: "neutral" },
 };
 
@@ -128,19 +128,23 @@ export default function Reimbursements({ loaderData }: Route.ComponentProps) {
               return (
                 <li
                   key={request.id}
-                  className="border-t border-divider py-3 first:border-t-0"
+                  className="py-1.5"
                 >
                   <Link
                     to={`/reimbursements/${request.id}`}
-                    className="flex items-center gap-3 rounded-md outline-offset-4 hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-accent"
+                    aria-label={`View ${request.item} reimbursement request`}
+                    className="group flex items-center gap-4 rounded-xl border border-divider bg-muted/30 px-4 py-3.5 outline-offset-4 transition-colors hover:border-accent/30 hover:bg-muted focus-visible:outline-2 focus-visible:outline-accent"
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="text-sm font-semibold">
+                      <span className="text-sm font-semibold group-hover:text-accent-foreground">
                         {request.item}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {request.eventName ?? request.department.label} · Submitted{" "}
                         {formatShortDate(request.createdAt)}
+                      </span>
+                      <span className="mt-1 flex items-center gap-0.5 text-xs font-medium text-accent-foreground">
+                        View request <ChevronRight className="size-3.5" />
                       </span>
                     </span>
                     <span className="flex flex-col items-end gap-1">
@@ -151,6 +155,10 @@ export default function Reimbursements({ loaderData }: Route.ComponentProps) {
                         <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
                       </span>
                     </span>
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-accent-foreground"
+                    />
                   </Link>
                 </li>
               );
@@ -231,7 +239,7 @@ export function RequestForm({
         {config.instruction && (
           <details className="relative text-sm">
             <summary className="flex cursor-pointer list-none items-center gap-1 font-medium text-accent-foreground">
-              <CircleHelp className="size-4" /> Receipt instructions
+              <CircleHelp className="size-4" /> Instructions for Submitting Receipts
             </summary>
             <p className="absolute right-0 z-10 mt-2 w-80 rounded-lg border border-divider bg-background p-3 text-xs leading-relaxed text-muted-foreground shadow-lg">
               {config.instruction.content}

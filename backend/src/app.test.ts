@@ -47,6 +47,12 @@ const reimbursements = {
   getForUser: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
+  listForFinance: vi.fn(),
+  getForFinance: vi.fn(),
+  updateFinanceStatus: vi.fn(),
+  updateFinanceInstructions: vi.fn(),
+  createFinanceCategory: vi.fn(),
+  archiveFinanceCategory: vi.fn(),
 } satisfies ReimbursementStore;
 
 const EVENT_ID = "28ee870f-b0e1-45a8-a49d-d137a2700166";

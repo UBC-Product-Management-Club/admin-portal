@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  CircleHelp,
   ExternalLink,
   FileText,
   Loader2,
@@ -28,9 +29,9 @@ const STATUS_CHIPS: Record<
   { label: string; tone: ChipTone }
 > = {
   pending: { label: "Pending", tone: "warning" },
-  in_transit: { label: "In transit", tone: "accent" },
+  in_transit: { label: "In Transit", tone: "accent" },
   complete: { label: "Complete", tone: "success" },
-  needs_changes: { label: "Needs changes", tone: "warning" },
+  needs_changes: { label: "Needs Changes", tone: "warning" },
   rejected: { label: "Rejected", tone: "neutral" },
 };
 
@@ -52,7 +53,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
         (event) =>
           event.eventId === request.eventId ||
           schoolYearOf(event.startTime) ===
-            schoolYearOf(new Date().toISOString()),
+          schoolYearOf(new Date().toISOString()),
       )
       .map(({ eventId, name }) => ({ eventId, name })),
   };
@@ -136,6 +137,16 @@ export default function ReimbursementDetail({
         </Alert>
       )}
       <form onSubmit={save} className="card-surface flex flex-col gap-5 p-6">
+        {loaderData.config.instruction && (
+          <details className="rounded-lg border border-divider bg-muted/30 p-3 text-sm">
+            <summary className="flex cursor-pointer list-none items-center gap-2 font-medium text-accent-foreground">
+              <CircleHelp className="size-4" /> Instructions for Submitting Receipts
+            </summary>
+            <p className="mt-3 leading-relaxed text-muted-foreground">
+              {loaderData.config.instruction.content}
+            </p>
+          </details>
+        )}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
           <FormField label="What did you buy?" htmlFor={`${id}-item`}>
             <Input

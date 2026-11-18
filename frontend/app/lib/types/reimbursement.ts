@@ -8,7 +8,7 @@ export const REIMBURSEMENT_STATUSES = [
   "rejected",
 ] as const;
 
-const categorySchema = z.object({
+export const reimbursementCategorySchema = z.object({
   id: z.string(),
   slug: z.string(),
   label: z.string(),
@@ -37,7 +37,7 @@ export const reimbursementSchema = z
     event_name: z.string().nullable(),
     item: z.string(),
     amount: z.coerce.number().positive(),
-    category: categorySchema,
+    category: reimbursementCategorySchema,
     department: departmentSchema,
     etransfer_email: z.string().email(),
     etransfer_full_name: z.string().nullable(),
@@ -94,7 +94,7 @@ export const reimbursementSchema = z
 
 export const reimbursementListSchema = z.array(reimbursementSchema);
 export const reimbursementConfigSchema = z.object({
-  categories: z.array(categorySchema),
+  categories: z.array(reimbursementCategorySchema),
   departments: z.array(departmentSchema),
   instruction: z
     .object({
@@ -108,3 +108,9 @@ export const reimbursementConfigSchema = z.object({
 export type Reimbursement = z.output<typeof reimbursementSchema>;
 export type ReimbursementStatus = (typeof REIMBURSEMENT_STATUSES)[number];
 export type ReimbursementConfig = z.output<typeof reimbursementConfigSchema>;
+export const reimbursementInstructionSchema = z.object({
+  content: z.string(),
+  version: z.number(),
+  updated_at: z.string(),
+});
+export const okSchema = z.object({ ok: z.literal(true) });

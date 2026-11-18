@@ -77,6 +77,37 @@ export const reimbursementInputSchema = z.object({
 });
 
 export type ReimbursementInput = z.output<typeof reimbursementInputSchema>;
+export const financeStatusInputSchema = z
+  .object({
+    status: z.enum(workflowStatuses),
+    reason: z.string().trim().max(2_000).nullable().optional(),
+  })
+  .superRefine((value, context) => {
+    if (
+      ["needs_changes", "rejected"].includes(value.status) &&
+      !value.reason?.trim()
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "Provide a reason for Needs Changes or Rejected",
+      });
+  });
+export type FinanceStatusInput = z.output<typeof financeStatusInputSchema>;
+export const financeInstructionInputSchema = z.object({
+  content: z.string().trim().min(1).max(5_000),
+});
+export type FinanceInstructionInput = z.output<typeof financeInstructionInputSchema>;
+export const financeCategoryInputSchema = z.object({
+  label: z.string().trim().min(1).max(160),
+  gl_code: z.string().trim().min(1).max(32),
+});
+export type FinanceCategoryInput = z.output<typeof financeCategoryInputSchema>;
+export type FinanceReimbursementFilters = {
+  status?: (typeof workflowStatuses)[number];
+  departmentId?: string;
+  eventId?: string;
+};
 
 export type ReceiptUpload = {
   buffer: Buffer;
@@ -101,6 +132,19 @@ export type ReimbursementStore = {
     attachments: ReceiptUpload[],
     removedAttachmentIds: string[],
   ): Promise<unknown>;
+  listForFinance(filters: FinanceReimbursementFilters): Promise<unknown[]>;
+  getForFinance(reimbursementId: string): Promise<unknown>;
+  updateFinanceStatus(
+    reimbursementId: string,
+    actorId: string,
+    input: FinanceStatusInput,
+  ): Promise<unknown>;
+  updateFinanceInstructions(
+    actorId: string,
+    input: FinanceInstructionInput,
+  ): Promise<unknown>;
+  createFinanceCategory(input: FinanceCategoryInput): Promise<unknown>;
+  archiveFinanceCategory(categoryId: string): Promise<void>;
 };
 
 type ReimbursementRow = z.output<typeof reimbursementRowSchema>;
@@ -154,6 +198,26 @@ export function createReimbursementStore(
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (reimbursementId) query = query.eq("reimbursement_id", reimbursementId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return z.array(reimbursementRowSchema).parse(data);
+  }
+
+  async function getRowsForFinance(
+    filters: FinanceReimbursementFilters,
+    reimbursementId?: string,
+  ) {
+    let query = db
+      .from("Reimbursement")
+      .select(
+        "reimbursement_id,user_id,event_id,item,amount,etransfer_email,etransfer_full_name,purchase_date,notes,vendor,vendor_reference,reimbursement_category_id,reimbursement_department_id,workflow_status,workflow_reason,instruction_version,created_at,updated_at",
+      )
+      .order("created_at", { ascending: false });
+    if (reimbursementId) query = query.eq("reimbursement_id", reimbursementId);
+    if (filters.status) query = query.eq("workflow_status", filters.status);
+    if (filters.departmentId)
+      query = query.eq("reimbursement_department_id", filters.departmentId);
+    if (filters.eventId) query = query.eq("event_id", filters.eventId);
     const { data, error } = await query;
     if (error) throw error;
     return z.array(reimbursementRowSchema).parse(data);
@@ -381,6 +445,9 @@ export function createReimbursementStore(
     async listForUser(userId) {
       return serializeRows(await getRowsForUser(userId));
     },
+    async listForFinance(filters) {
+      return serializeRows(await getRowsForFinance(filters));
+    },
     async getForUser(reimbursementId, userId) {
       const rows = await getRowsForUser(userId, reimbursementId);
       if (rows.length === 0)
@@ -390,6 +457,104 @@ export function createReimbursementStore(
           "Reimbursement request not found",
         );
       return (await serializeRows(rows))[0];
+    },
+    async getForFinance(reimbursementId) {
+      const rows = await getRowsForFinance({}, reimbursementId);
+      if (rows.length === 0)
+        throw new HttpError(404, "NOT_FOUND", "Reimbursement request not found");
+      return (await serializeRows(rows))[0];
+    },
+    async updateFinanceStatus(reimbursementId, actorId, input) {
+      const current = await getRowsForFinance({}, reimbursementId);
+      const ticket = current[0];
+      if (!ticket)
+        throw new HttpError(404, "NOT_FOUND", "Reimbursement request not found");
+      const reason = input.reason?.trim() || null;
+      const { error } = await db
+        .from("Reimbursement")
+        .update({
+          workflow_status: input.status,
+          workflow_reason: reason,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("reimbursement_id", reimbursementId);
+      if (error) throw error;
+      if (ticket.workflow_status !== input.status || ticket.workflow_reason !== reason) {
+        const { error: eventError } = await db
+          .from("ReimbursementStatusEvent")
+          .insert({
+            reimbursement_id: reimbursementId,
+            from_status: ticket.workflow_status,
+            to_status: input.status,
+            reason,
+            source: "finance_manual",
+            actor_id: actorId,
+          });
+        if (eventError) throw eventError;
+      }
+      return this.getForFinance(reimbursementId);
+    },
+    async updateFinanceInstructions(actorId, input) {
+      const { data: current, error: currentError } = await db
+        .from("ReimbursementInstruction")
+        .select("version")
+        .eq("reimbursement_instruction_id", true)
+        .maybeSingle();
+      if (currentError) throw currentError;
+      const { data, error } = await db
+        .from("ReimbursementInstruction")
+        .upsert({
+          reimbursement_instruction_id: true,
+          content: input.content,
+          version: (current?.version ?? 0) + 1,
+          updated_by: actorId,
+          updated_at: new Date().toISOString(),
+        })
+        .select("content,version,updated_at")
+        .single();
+      if (error) throw error;
+      return instructionRowSchema.parse(data);
+    },
+    async createFinanceCategory(input) {
+      const slug = input.label
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+      if (!slug)
+        throw new HttpError(400, "INVALID_CATEGORY", "Enter a valid category name");
+      const { data: lastCategory, error: lastCategoryError } = await db
+        .from("ReimbursementCategory")
+        .select("sort_order")
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lastCategoryError) throw lastCategoryError;
+      const { data, error } = await db
+        .from("ReimbursementCategory")
+        .insert({
+          slug,
+          label: input.label,
+          gl_code: input.gl_code,
+          sort_order: (lastCategory?.sort_order ?? 0) + 10,
+        })
+        .select("reimbursement_category_id,slug,label,gl_code,sort_order")
+        .single();
+      if (error) throw error;
+      const category = categoryRowSchema.parse(data);
+      return {
+        id: category.reimbursement_category_id,
+        slug: category.slug,
+        label: category.label,
+        gl_code: category.gl_code,
+      };
+    },
+    async archiveFinanceCategory(categoryId) {
+      const { error } = await db
+        .from("ReimbursementCategory")
+        .update({ is_active: false, archived_at: new Date().toISOString() })
+        .eq("reimbursement_category_id", categoryId);
+      if (error) throw error;
     },
     async create(userId, input, attachments) {
       if (attachments.length === 0)
