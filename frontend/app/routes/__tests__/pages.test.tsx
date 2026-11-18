@@ -321,7 +321,9 @@ describe("portal pages (mock data)", () => {
       now: new Date("2026-10-20T12:00:00Z"),
     });
     renderPage("events", "/events", Events, eventsLoader);
-    expect(await screen.findByText("PM 101 Workshop")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Fall Case Competition"),
+    ).toBeInTheDocument();
     expect(
       screen.queryByText("Industry Speaker Panel"),
     ).not.toBeInTheDocument();
@@ -414,7 +416,7 @@ describe("portal pages (mock data)", () => {
     );
     expect(await screen.findByText("Pizza for workshop")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Submit request" }),
+      screen.getByRole("link", { name: "+ Create new request" }),
     ).toBeInTheDocument();
   });
 });

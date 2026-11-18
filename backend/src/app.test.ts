@@ -5,6 +5,7 @@ import { createApp } from "./app.js";
 import { HttpError } from "./lib/http-error.js";
 import type { ApplicantStore } from "./lib/applicants.js";
 import type { EventStore } from "./lib/events.js";
+import type { ReimbursementStore } from "./lib/reimbursements.js";
 import type { SubmissionStore } from "./lib/submissions.js";
 import type { AuthUser, VerifyToken } from "./lib/supabase.js";
 import type { UserStore } from "./lib/users.js";
@@ -21,6 +22,11 @@ const users: Record<string, AuthUser> = {
     email: "fake@ubcpmc.com",
     emailConfirmed: false,
   },
+  "finance-token": {
+    id: "u4",
+    email: "finance@ubcpmc.com",
+    emailConfirmed: true,
+  },
 };
 const verifyToken: VerifyToken = async (token) => users[token] ?? null;
 
@@ -36,6 +42,19 @@ const applicants = {
   decide: vi.fn(),
   setPaymentDue: vi.fn(),
 } satisfies ApplicantStore;
+const reimbursements = {
+  getFormConfig: vi.fn(),
+  listForUser: vi.fn(),
+  getForUser: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+  listForFinance: vi.fn(),
+  getForFinance: vi.fn(),
+  updateFinanceStatus: vi.fn(),
+  updateFinanceInstructions: vi.fn(),
+  createFinanceCategory: vi.fn(),
+  archiveFinanceCategory: vi.fn(),
+} satisfies ReimbursementStore;
 const submissions = { listSubmissions: vi.fn() } satisfies SubmissionStore;
 
 const EVENT_ID = "28ee870f-b0e1-45a8-a49d-d137a2700166";
@@ -45,10 +64,13 @@ const APPLICANT_PATH = `/api/v2/admin/events/${EVENT_ID}/applicants/${ATTENDEE_I
 const app = createApp({
   corsOrigins: ["http://localhost:5173"],
   adminEmailDomains: ["ubcpmc.com"],
+  financeOperatorEmails: ["finance@ubcpmc.com"],
+  financeAdminEmails: ["finance@ubcpmc.com"],
   verifyToken,
   users: memberStore,
   events: eventStore,
   applicants,
+  reimbursements,
   submissions,
 });
 
@@ -93,6 +115,23 @@ describe("admin API", () => {
       .set("Authorization", "Bearer exec-token")
       .expect(501);
     expect(res.body.error.code).toBe("NOT_IMPLEMENTED");
+  });
+
+  it("only allows the configured Finance account to use Finance routes", async () => {
+    await request(app)
+      .get("/api/v2/admin/finance/access")
+      .set("Authorization", "Bearer exec-token")
+      .expect(403, {
+        error: {
+          code: "FINANCE_ACCESS_REQUIRED",
+          message: "This action requires Finance access",
+        },
+      });
+
+    await request(app)
+      .get("/api/v2/admin/finance/access")
+      .set("Authorization", "Bearer finance-token")
+      .expect(200, { role: "admin" });
   });
 
   it("returns the standard error shape for unknown routes", async () => {

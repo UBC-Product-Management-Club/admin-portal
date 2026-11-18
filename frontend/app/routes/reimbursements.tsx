@@ -1,5 +1,12 @@
-import { Loader2, Upload } from "lucide-react";
+import {
+  ChevronRight,
+  CircleHelp,
+  Loader2,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useId, useRef, useState, type FormEvent } from "react";
+import { Link } from "react-router";
 
 import { FormField } from "~/components/form-field";
 import { PageHeader } from "~/components/page-header";
@@ -9,221 +16,241 @@ import { StatusChip, type ChipTone } from "~/components/status-chip";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
 import { isValidDate } from "~/lib/date-parts";
 import { formatCurrency, formatShortDate, schoolYearOf } from "~/lib/format";
 import { eventService } from "~/lib/services/event-service";
 import { reimbursementService } from "~/lib/services/reimbursement-service";
-import {
-  REIMBURSEMENT_CATEGORIES,
-  REIMBURSEMENT_CATEGORY_LABELS,
-  type Reimbursement,
-  type ReimbursementCategory,
-  type ReimbursementStatus,
+import type {
+  Reimbursement,
+  ReimbursementConfig,
+  ReimbursementStatus,
 } from "~/lib/types/reimbursement";
 import type { Route } from "./+types/reimbursements";
 
-const NO_EVENT = "none";
-
+const NO_EVENT = "";
 const STATUS_CHIPS: Record<
   ReimbursementStatus,
   { label: string; tone: ChipTone }
 > = {
-  submitted: { label: "Submitted", tone: "warning" },
-  approved: { label: "Approved", tone: "accent" },
-  paid: { label: "Paid", tone: "success" },
+  pending: { label: "Pending", tone: "warning" },
+  in_transit: { label: "In Transit", tone: "accent" },
+  complete: { label: "Complete", tone: "success" },
+  needs_changes: { label: "Needs Changes", tone: "warning" },
   rejected: { label: "Rejected", tone: "neutral" },
 };
 
 export async function clientLoader() {
-  const [requests, events] = await Promise.all([
-    reimbursementService.listMyRequests(),
+  return { requests: await reimbursementService.listMyRequests() };
+}
+
+export async function loadNewRequestForm() {
+  const [events, config] = await Promise.all([
     eventService.listEvents(),
+    reimbursementService.getFormConfig(),
   ]);
   return {
-    requests,
+    config,
     events: events
+      .filter(
+        (event) =>
+          schoolYearOf(event.startTime) ===
+          schoolYearOf(new Date().toISOString()),
+      )
       .map(({ eventId, name, startTime }) => ({ eventId, name, startTime }))
       .sort((a, b) => b.startTime.localeCompare(a.startTime)),
   };
 }
-
 export function ErrorBoundary() {
   return <RouteError />;
 }
 
 export default function Reimbursements({ loaderData }: Route.ComponentProps) {
-  const [requests, setRequests] = useState(loaderData.requests);
+  const { requests } = loaderData;
   const thisSchoolYear = schoolYearOf(new Date().toISOString());
-
-  const totalFor = (matches: (r: Reimbursement) => boolean) => {
+  const totalFor = (matches: (request: Reimbursement) => boolean) => {
     const matching = requests.filter(matches);
     return {
-      amount: formatCurrency(matching.reduce((sum, r) => sum + r.amount, 0)),
+      amount: formatCurrency(
+        matching.reduce((sum, request) => sum + request.amount, 0),
+      ),
       caption: `${matching.length} ${matching.length === 1 ? "request" : "requests"}`,
     };
   };
-  const waiting = totalFor((r) => r.status === "submitted");
-  const approved = totalFor((r) => r.status === "approved");
-  const paid = totalFor(
-    (r) => r.status === "paid" && schoolYearOf(r.createdAt) === thisSchoolYear,
+  const pending = totalFor(
+    (request) =>
+      request.status === "pending" || request.status === "needs_changes",
   );
-
+  const inTransit = totalFor((request) => request.status === "in_transit");
+  const complete = totalFor(
+    (request) =>
+      request.status === "complete" &&
+      schoolYearOf(request.createdAt) === thisSchoolYear,
+  );
   return (
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6">
       <PageHeader
         title="Reimbursements"
-        description="Spent your own money on the club? Request it back. The treasurer reviews every request."
+        description="Submit a reimbursable club expense. Finance verifies the combined receipts and total."
+        actions={
+          <Button asChild>
+            <Link to="/reimbursements/new">+ Create new request</Link>
+          </Button>
+        }
       />
-
       <section
         aria-label="Summary"
         className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-4"
       >
         <StatCard
-          label="Waiting for approval"
-          value={waiting.amount}
-          caption={waiting.caption}
+          label="Pending review"
+          value={pending.amount}
+          caption={pending.caption}
         />
         <StatCard
-          label="Approved, not paid yet"
-          value={approved.amount}
-          caption={approved.caption}
+          label="In transit"
+          value={inTransit.amount}
+          caption={inTransit.caption}
         />
         <StatCard
-          label="Paid out this year"
-          value={paid.amount}
+          label="Completed this year"
+          value={complete.amount}
           caption={thisSchoolYear}
         />
       </section>
-
-      <div className="flex flex-wrap items-start gap-4">
-        <NewRequestForm
-          events={loaderData.events}
-          onSubmitted={(request) =>
-            setRequests((current) => [request, ...current])
-          }
-        />
-
-        <section
-          aria-labelledby="my-requests-heading"
-          className="card-surface flex min-w-0 flex-[1_1_340px] flex-col gap-3.5 p-6"
-        >
-          <h2 id="my-requests-heading" className="text-lg font-semibold">
-            My requests
-          </h2>
-          <p className="text-[13px] text-muted-foreground">
-            Submitted → Approved → Paid
-          </p>
-          {requests.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No requests yet.</p>
-          ) : (
-            <ul className="flex flex-col">
-              {requests.map((request) => {
-                const chip = STATUS_CHIPS[request.status];
-                return (
-                  <li
-                    key={request.id}
-                    className="flex items-center gap-3 border-t border-divider py-3"
+      <section
+        aria-labelledby="my-requests-heading"
+        className="card-surface flex w-full flex-col gap-3.5 p-6"
+      >
+        <h2 id="my-requests-heading" className="text-lg font-semibold">
+          My requests
+        </h2>
+        {requests.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No requests yet.</p>
+        ) : (
+          <ul className="flex flex-col">
+            {requests.map((request) => {
+              const chip = STATUS_CHIPS[request.status];
+              return (
+                <li key={request.id} className="py-1.5">
+                  <Link
+                    to={`/reimbursements/${request.id}`}
+                    aria-label={`View ${request.item} reimbursement request`}
+                    className="group flex items-center gap-4 rounded-xl border border-divider bg-muted/30 px-4 py-3.5 outline-offset-4 transition-colors hover:border-accent/30 hover:bg-muted focus-visible:outline-2 focus-visible:outline-accent"
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="text-sm font-semibold">
+                      <span className="text-sm font-semibold group-hover:text-accent-foreground">
                         {request.item}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {request.eventName ?? "No event"} · Submitted{" "}
-                        {formatShortDate(request.createdAt)}
+                        {request.eventName ?? request.department.label} ·
+                        Submitted {formatShortDate(request.createdAt)}
+                      </span>
+                      <span className="mt-1 flex items-center gap-0.5 text-xs font-medium text-accent-foreground">
+                        View request <ChevronRight className="size-3.5" />
                       </span>
                     </span>
                     <span className="flex flex-col items-end gap-1">
                       <span className="text-sm font-semibold">
                         {formatCurrency(request.amount)}
                       </span>
-                      <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
+                      <span title={request.statusReason ?? undefined}>
+                        <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
+                      </span>
                     </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-      </div>
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-accent-foreground"
+                    />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
 
 type EventOption = { eventId: string; name: string };
-
-function NewRequestForm({
+export function RequestForm({
+  config,
   events,
   onSubmitted,
 }: {
+  config: ReimbursementConfig;
   events: EventOption[];
   onSubmitted: (request: Reimbursement) => void;
 }) {
   const id = useId();
   const formRef = useRef<HTMLFormElement>(null);
-  const [eventId, setEventId] = useState(NO_EVENT);
-  const [category, setCategory] = useState<ReimbursementCategory>("food");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{
     tone: "error" | "info";
     text: string;
   } | null>(null);
-
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
     const amount = Number(form.get("amount"));
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setMessage({ tone: "error", text: "Amount must be more than $0." });
-      return;
-    }
-    if (!isValidDate(String(form.get("purchase_date")))) {
-      setMessage({ tone: "error", text: "Enter a real purchase date." });
-      return;
-    }
-    form.set("category", category);
-    if (eventId !== NO_EVENT) form.set("event_id", eventId);
-
+    if (!Number.isFinite(amount) || amount <= 0)
+      return setMessage({
+        tone: "error",
+        text: "Amount must be more than $0.",
+      });
+    if (!isValidDate(String(form.get("purchase_date"))))
+      return setMessage({ tone: "error", text: "Enter a real purchase date." });
+    if (files.length === 0)
+      return setMessage({
+        tone: "error",
+        text: "Attach at least one receipt or receipt photo.",
+      });
+    for (const file of files) form.append("attachments", file);
     setIsSaving(true);
     setMessage(null);
     try {
       onSubmitted(await reimbursementService.submitRequest(form));
       formRef.current?.reset();
-      setEventId(NO_EVENT);
-      setCategory("food");
+      setFiles([]);
       setMessage({
         tone: "info",
-        text: "Request submitted. The treasurer will review it.",
+        text: "Request submitted. Finance will review the receipt total.",
       });
     } catch {
       setMessage({
         tone: "error",
-        text: "Couldn't submit your request. Try again.",
+        text: "Couldn't submit your request. Check the fields and try again.",
       });
     } finally {
       setIsSaving(false);
     }
   }
-
   return (
     <form
       ref={formRef}
       onSubmit={handleSubmit}
       aria-labelledby="new-request-heading"
-      className="card-surface flex min-w-0 flex-[1.2_1_420px] flex-col gap-4 p-6"
+      className="card-surface flex w-full flex-col gap-4 p-6"
     >
-      <h2 id="new-request-heading" className="text-lg font-semibold">
-        New request
-      </h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="new-request-heading" className="text-lg font-semibold">
+          New request
+        </h2>
+        {config.instruction && (
+          <details className="relative text-sm">
+            <summary className="flex cursor-pointer list-none items-center gap-1 font-medium text-accent-foreground">
+              <CircleHelp className="size-4" /> Instructions for Submitting
+              Receipts
+            </summary>
+            <p className="absolute right-0 z-10 mt-2 w-80 rounded-lg border border-divider bg-background p-3 text-xs leading-relaxed text-muted-foreground shadow-lg">
+              {config.instruction.content}
+            </p>
+          </details>
+        )}
+      </div>
       <FormField label="What did you buy?" htmlFor={`${id}-item`}>
         <Input
           id={`${id}-item`}
@@ -254,76 +281,167 @@ function NewRequestForm({
         </FormField>
       </div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
-        <FormField label="Related event" htmlFor={`${id}-event`}>
-          <Select value={eventId} onValueChange={setEventId}>
-            <SelectTrigger id={`${id}-event`} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_EVENT}>None</SelectItem>
-              {events.map((event) => (
-                <SelectItem key={event.eventId} value={event.eventId}>
-                  {event.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormField>
-        <FormField label="Category" htmlFor={`${id}-category`}>
-          <Select
-            value={category}
-            onValueChange={(value) =>
-              setCategory(value as ReimbursementCategory)
-            }
+        <FormField label="Department" htmlFor={`${id}-department`}>
+          <select
+            id={`${id}-department`}
+            name="department_id"
+            required
+            defaultValue=""
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
-            <SelectTrigger id={`${id}-category`} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {REIMBURSEMENT_CATEGORIES.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {REIMBURSEMENT_CATEGORY_LABELS[value]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="" disabled>
+              Select department
+            </option>
+            {config.departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.label}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label="Expense category" htmlFor={`${id}-category`}>
+          <select
+            id={`${id}-category`}
+            name="category_id"
+            required
+            defaultValue=""
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="" disabled>
+              Select category
+            </option>
+            {config.categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.label} · {category.gl_code}
+              </option>
+            ))}
+          </select>
         </FormField>
       </div>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+        <FormField label="Related event (optional)" htmlFor={`${id}-event`}>
+          <select
+            id={`${id}-event`}
+            name="event_id"
+            defaultValue={NO_EVENT}
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value={NO_EVENT}>No related event</option>
+            {events.map((event) => (
+              <option key={event.eventId} value={event.eventId}>
+                {event.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label="Vendor (optional)" htmlFor={`${id}-vendor`}>
+          <Input
+            id={`${id}-vendor`}
+            name="vendor"
+            placeholder="Store or supplier"
+          />
+        </FormField>
+      </div>
+      <FormField
+        label="Vendor reference (optional)"
+        htmlFor={`${id}-reference`}
+      >
+        <Input
+          id={`${id}-reference`}
+          name="vendor_reference"
+          placeholder="Order, invoice, or transaction reference"
+        />
+      </FormField>
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor={`${id}-receipt`}
           className="text-[13px] font-medium text-neutral-foreground"
         >
-          Receipt
+          Receipts and photos
         </label>
-        <div className="flex flex-col items-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-dropzone-border bg-dropzone p-5 text-center text-sm font-semibold text-accent-foreground">
+        <div className="flex flex-col items-center gap-2 rounded-xl border-[1.5px] border-dashed border-dropzone-border bg-dropzone p-5 text-center text-sm font-semibold text-accent-foreground">
           <Upload aria-hidden="true" className="size-5" />
-          Upload a photo or PDF of the receipt
+          <span>Upload one or more receipt photos or PDFs</span>
           <input
+            ref={fileInputRef}
             id={`${id}-receipt`}
-            name="receipt"
             type="file"
-            accept="image/*,.pdf"
-            required
-            className="max-w-full text-[13px] font-normal text-neutral-foreground file:mr-3 file:h-9 file:rounded-[10px] file:border file:border-input file:bg-background file:px-3 file:text-[13px] file:font-semibold file:text-foreground"
+            accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif"
+            multiple
+            className="sr-only"
+            onChange={(event) => {
+              const selectedFiles = Array.from(event.currentTarget.files ?? []);
+              setFiles((current) => [...current, ...selectedFiles]);
+              // Let someone remove a file and select that same file again.
+              event.currentTarget.value = "";
+            }}
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Add files
+          </Button>
         </div>
+        {files.length > 0 && (
+          <ul className="flex flex-col gap-2" aria-label="Selected uploads">
+            {files.map((file, index) => (
+              <li
+                key={`${file.name}-${index}`}
+                className="flex items-center justify-between gap-3 rounded-lg border border-divider bg-background px-3 py-2 text-left text-sm"
+              >
+                <span className="min-w-0 truncate text-muted-foreground">
+                  {file.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFiles((current) =>
+                      current.filter(
+                        (_, currentIndex) => currentIndex !== index,
+                      ),
+                    )
+                  }
+                  className="flex shrink-0 items-center gap-1 text-xs font-medium text-destructive hover:underline"
+                  aria-label={`Remove ${file.name}`}
+                >
+                  <Trash2 className="size-3.5" /> Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-      <FormField label="E-transfer email" htmlFor={`${id}-etransfer-email`}>
-        <Input
-          id={`${id}-etransfer-email`}
-          name="etransfer_email"
-          type="email"
-          required
-          placeholder="Where the treasurer should send the money"
-        />
-      </FormField>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+        <FormField label="E-transfer email" htmlFor={`${id}-etransfer-email`}>
+          <Input
+            id={`${id}-etransfer-email`}
+            name="etransfer_email"
+            type="email"
+            required
+            placeholder="Where Finance sends payment"
+          />
+        </FormField>
+        <FormField
+          label="Full name under e-transfer"
+          htmlFor={`${id}-etransfer-name`}
+        >
+          <Input
+            id={`${id}-etransfer-name`}
+            name="etransfer_full_name"
+            required
+            placeholder="Name shown to Finance"
+          />
+        </FormField>
+      </div>
       <FormField label="Notes (optional)" htmlFor={`${id}-notes`}>
         <Textarea
           id={`${id}-notes`}
           name="notes"
           className="min-h-20"
-          placeholder="Anything the treasurer should know"
+          placeholder="Anything Finance should know"
         />
       </FormField>
       {message && (

@@ -27,7 +27,13 @@ describe("MockClient", () => {
     expect(events).toHaveLength(8);
     expect(attendees.length).toBeGreaterThan(0);
     expect(new Set(requests.map((r) => r.status))).toEqual(
-      new Set(["submitted", "approved", "paid", "rejected"]),
+      new Set([
+        "pending",
+        "needs_changes",
+        "in_transit",
+        "complete",
+        "rejected",
+      ]),
     );
     expect(users[0]).toHaveProperty("firstName");
   });
@@ -46,9 +52,15 @@ describe("MockClient", () => {
     const form = new FormData();
     form.set("item", "Tape");
     form.set("amount", "4.50");
-    form.set("category", "other");
+    form.set("category_id", "cat-misc");
+    form.set("department_id", "dept-tech");
     form.set("purchase_date", "2026-10-30");
     form.set("etransfer_email", "exec@example.ca");
+    form.set("etransfer_full_name", "Exec Example");
+    form.append(
+      "attachments",
+      new File(["receipt"], "receipt.pdf", { type: "application/pdf" }),
+    );
     const request = await client.post(
       "/reimbursements",
       reimbursementSchema,
@@ -57,7 +69,7 @@ describe("MockClient", () => {
     expect(request).toMatchObject({
       item: "Tape",
       amount: 4.5,
-      status: "submitted",
+      status: "pending",
     });
   });
 

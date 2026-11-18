@@ -62,7 +62,9 @@ export async function clientLoader() {
     thisSchoolYear,
     memberCount: members.length,
     waitingCount:
-      reimbursements?.filter((r) => r.status === "submitted").length ?? null,
+      reimbursements?.filter(
+        (r) => r.status === "pending" || r.status === "needs_changes",
+      ).length ?? null,
     eventsThisYear: events.filter(
       (event) => schoolYearOf(event.startTime) === thisSchoolYear,
     ).length,

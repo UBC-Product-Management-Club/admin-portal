@@ -3,33 +3,42 @@ import express from "express";
 
 import { errorHandler, notFound } from "./middleware/error-handler.js";
 import { requireAdmin } from "./middleware/require-admin.js";
+import { requireFinance } from "./middleware/require-finance.js";
 import type { ApplicantStore } from "./lib/applicants.js";
 import type { EventStore } from "./lib/events.js";
+import type { ReimbursementStore } from "./lib/reimbursements.js";
 import type { SubmissionStore } from "./lib/submissions.js";
 import type { VerifyToken } from "./lib/supabase.js";
 import type { UserStore } from "./lib/users.js";
 import { router as budget } from "./routes/budget.js";
 import { createEventsRouter } from "./routes/events.js";
-import { router as reimbursements } from "./routes/reimbursements.js";
+import { createFinanceRouter } from "./routes/finance.js";
+import { createReimbursementsRouter } from "./routes/reimbursements.js";
 import { createUsersRouter } from "./routes/users.js";
 
 type AppOptions = {
   corsOrigins: string[];
   adminEmailDomains: string[];
+  financeOperatorEmails?: string[];
+  financeAdminEmails?: string[];
   verifyToken: VerifyToken;
   users: UserStore;
   events: EventStore;
   applicants: ApplicantStore;
+  reimbursements: ReimbursementStore;
   submissions: SubmissionStore;
 };
 
 export function createApp({
   corsOrigins,
   adminEmailDomains,
+  financeOperatorEmails = [],
+  financeAdminEmails = [],
   verifyToken,
   users,
   events,
   applicants,
+  reimbursements,
   submissions,
 }: AppOptions) {
   const app = express();
@@ -44,8 +53,13 @@ export function createApp({
   admin.use(requireAdmin(verifyToken, adminEmailDomains));
   admin.use("/users", createUsersRouter(users));
   admin.use("/events", createEventsRouter(events, applicants, submissions));
-  admin.use("/reimbursements", reimbursements);
+  admin.use("/reimbursements", createReimbursementsRouter(reimbursements));
   admin.use("/budget", budget);
+  admin.use(
+    "/finance",
+    requireFinance(financeOperatorEmails, financeAdminEmails),
+    createFinanceRouter(reimbursements),
+  );
   app.use("/api/v2/admin", admin);
 
   app.use(notFound);
