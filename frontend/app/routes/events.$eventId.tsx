@@ -5,17 +5,19 @@ import { EventConfiguration } from "~/components/event-configuration";
 import { PageHeader } from "~/components/page-header";
 import { RouteError } from "~/components/route-error";
 import { StatusChip } from "~/components/status-chip";
+import { TeamSubmissions } from "~/components/team-submissions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { formatDate, schoolYearOf } from "~/lib/format";
 import { eventService } from "~/lib/services/event-service";
 import type { Route } from "./+types/events.$eventId";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  const [event, attendees] = await Promise.all([
+  const [event, attendees, submissions] = await Promise.all([
     eventService.getEvent(params.eventId),
     eventService.listAttendees(params.eventId),
+    eventService.listSubmissions(params.eventId),
   ]);
-  return { event, attendees };
+  return { event, attendees, submissions };
 }
 
 export function ErrorBoundary() {
@@ -30,8 +32,12 @@ export default function EventDetailRoute({ loaderData }: Route.ComponentProps) {
 function EventDetail({
   event: initialEvent,
   attendees,
+  submissions,
 }: Route.ComponentProps["loaderData"]) {
   const [event, setEvent] = useState(initialEvent);
+  // Only events teams submit projects to get a Submissions tab.
+  const hasSubmissions =
+    submissions.fields.length > 0 || submissions.teams.length > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6">
@@ -49,11 +55,19 @@ function EventDetail({
       <Tabs defaultValue="attendees" className="gap-6">
         <TabsList aria-label="Event sections">
           <TabsTrigger value="attendees">Attendees</TabsTrigger>
+          {hasSubmissions && (
+            <TabsTrigger value="submissions">Submissions</TabsTrigger>
+          )}
           <TabsTrigger value="configuration">Configuration</TabsTrigger>
         </TabsList>
         <TabsContent value="attendees">
           <EventAttendees eventName={event.name} attendees={attendees} />
         </TabsContent>
+        {hasSubmissions && (
+          <TabsContent value="submissions">
+            <TeamSubmissions eventName={event.name} submissions={submissions} />
+          </TabsContent>
+        )}
         <TabsContent value="configuration">
           <EventConfiguration event={event} onEventChange={setEvent} />
         </TabsContent>

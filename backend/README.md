@@ -36,7 +36,9 @@ src/
   middleware/               requireAdmin, notFound, errorHandler
   lib/users.ts, events.ts   members list, events grid, event details, attendees
   lib/applicants.ts         applicant review, decisions go through accept_applicants / reject_applicants
-  routes/                   users, events, reimbursements, finance access, budget
+  lib/submissions.ts        each team's latest project submission, with signed deck links
+  lib/reimbursements.ts     request workflow, receipts, finance settings, and audit events
+  routes/                   users, events, reimbursements, finance, budget
 ```
 
 ## Scripts

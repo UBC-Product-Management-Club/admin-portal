@@ -3,6 +3,7 @@ import { loadEnv } from "./env.js";
 import { createApplicantStore } from "./lib/applicants.js";
 import { createEventStore } from "./lib/events.js";
 import { createReimbursementStore } from "./lib/reimbursements.js";
+import { createSubmissionStore } from "./lib/submissions.js";
 import { createAdminClient, createTokenVerifier } from "./lib/supabase.js";
 import { createUserStore } from "./lib/users.js";
 
@@ -24,6 +25,7 @@ const app = createApp({
     db,
     env.SUPABASE_REIMBURSEMENT_BUCKET_NAME,
   ),
+  submissions: createSubmissionStore(db, env.SUPABASE_DELIVERABLES_BUCKET_NAME),
 });
 
 app.listen(env.PORT, () => {

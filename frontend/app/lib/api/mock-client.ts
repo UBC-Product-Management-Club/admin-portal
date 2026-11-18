@@ -5,10 +5,13 @@ import { ApiError } from "~/lib/api/rest-client";
 import {
   MOCK_CURRENT_USER_ID,
   MOCK_REVIEW_EVENT,
+  MOCK_SUBMISSION_EVENT_ID,
   mockApplicants,
   mockEvents,
   mockRegistrations,
   mockReimbursements,
+  mockSubmissionFields,
+  mockSubmissions,
   mockUsers,
   type RawEvent,
   type RawReimbursement,
@@ -138,6 +141,16 @@ export class MockClient implements ApiClient {
       const event = this.findEvent(eventId);
       event.thumbnail_url = fileUrl(asFormData(body).get("thumbnail"));
       return this.toEvent(event);
+    }),
+    this.route("GET", "/events/:eventId/submissions", ({ eventId }) => {
+      const event = this.findEvent(eventId);
+      const hasTeams = event.event_id === MOCK_SUBMISSION_EVENT_ID;
+      return {
+        event_id: event.event_id,
+        name: event.name,
+        fields: hasTeams ? mockSubmissionFields : [],
+        teams: hasTeams ? mockSubmissions : [],
+      };
     }),
     this.route("GET", "/events/:eventId/attendees", ({ eventId }) =>
       this.registrations

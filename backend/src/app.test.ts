@@ -6,6 +6,7 @@ import { HttpError } from "./lib/http-error.js";
 import type { ApplicantStore } from "./lib/applicants.js";
 import type { EventStore } from "./lib/events.js";
 import type { ReimbursementStore } from "./lib/reimbursements.js";
+import type { SubmissionStore } from "./lib/submissions.js";
 import type { AuthUser, VerifyToken } from "./lib/supabase.js";
 import type { UserStore } from "./lib/users.js";
 
@@ -54,6 +55,7 @@ const reimbursements = {
   createFinanceCategory: vi.fn(),
   archiveFinanceCategory: vi.fn(),
 } satisfies ReimbursementStore;
+const submissions = { listSubmissions: vi.fn() } satisfies SubmissionStore;
 
 const EVENT_ID = "28ee870f-b0e1-45a8-a49d-d137a2700166";
 const ATTENDEE_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -69,6 +71,7 @@ const app = createApp({
   events: eventStore,
   applicants,
   reimbursements,
+  submissions,
 });
 
 describe("admin API", () => {
@@ -170,6 +173,15 @@ describe("admin API", () => {
     expect(eventStore.listAttendees).toHaveBeenCalledWith(EVENT_ID);
   });
 
+  it("lists an event's team submissions", async () => {
+    submissions.listSubmissions.mockResolvedValue({ event_id: EVENT_ID });
+    await request(app)
+      .get(`/api/v2/admin/events/${EVENT_ID}/submissions`)
+      .set("Authorization", "Bearer exec-token")
+      .expect(200, { event_id: EVENT_ID });
+    expect(submissions.listSubmissions).toHaveBeenCalledWith(EVENT_ID);
+  });
+
   it("rejects event ids that aren't valid", async () => {
     await request(app)
       .get("/api/v2/admin/events/not-an-id")
@@ -183,6 +195,7 @@ describe("admin API", () => {
     "/events/basic",
     `/events/${EVENT_ID}`,
     `/events/${EVENT_ID}/attendees`,
+    `/events/${EVENT_ID}/submissions`,
   ])("keeps %s behind admin auth", async (path) => {
     await request(app).get(`/api/v2/admin${path}`).expect(401);
     await request(app)
@@ -193,6 +206,7 @@ describe("admin API", () => {
     expect(eventStore.listBasicEvents).not.toHaveBeenCalled();
     expect(eventStore.getEvent).not.toHaveBeenCalled();
     expect(eventStore.listAttendees).not.toHaveBeenCalled();
+    expect(submissions.listSubmissions).not.toHaveBeenCalled();
   });
 
   describe("applicants", () => {

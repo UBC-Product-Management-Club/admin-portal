@@ -28,6 +28,12 @@ vi.mock("~/lib/env", () => ({
   getEnv: () => ({ VITE_USE_MOCKS: true }),
 }));
 
+const { downloadCsv } = vi.hoisted(() => ({ downloadCsv: vi.fn() }));
+vi.mock("~/lib/csv", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/csv")>()),
+  downloadCsv,
+}));
+
 const SESSION_USER = {
   firstName: "Ava",
   lastName: "Chen",
@@ -335,6 +341,9 @@ describe("portal pages (mock data)", () => {
     expect(
       await screen.findByRole("heading", { name: "Attendee data" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Submissions" }),
+    ).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Configuration" }));
     expect(
       screen.getByRole("switch", { name: "Show on membership portal" }),
@@ -342,6 +351,51 @@ describe("portal pages (mock data)", () => {
     expect(
       screen.getByRole("button", { name: "Update on portal" }),
     ).toBeInTheDocument();
+  });
+
+  it("event submissions lists teams and exports them for judges", async () => {
+    const user = userEvent.setup();
+    renderPage(
+      "events/:eventId",
+      "/events/evt-02",
+      EventDetail,
+      eventDetailLoader,
+    );
+    await user.click(await screen.findByRole("tab", { name: "Submissions" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Team submissions" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Pocket Planners")).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Slide deck" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: "Open file" })[0],
+    ).toHaveAttribute("href", "https://example.com/pocket-planners.pdf");
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search teams" }),
+      "kai",
+    );
+    expect(screen.getByText("Study Buddies")).toBeInTheDocument();
+    expect(screen.queryByText("Pocket Planners")).not.toBeInTheDocument();
+
+    await user.clear(screen.getByRole("searchbox", { name: "Search teams" }));
+    await user.click(screen.getByRole("button", { name: "Export CSV" }));
+    const [filename, csv] = downloadCsv.mock.calls[0] as [string, string];
+    expect(filename).toBe("winter-case-competition-submissions.csv");
+    const lines = csv.split("\r\n");
+    expect(lines[0]).toBe(
+      "Team,Finalist,Members,Member emails,Submitted at,Slide deck,Prototype / demo link,Video link,Short product description",
+    );
+    expect(lines[1]).toContain(
+      "Pocket Planners,Yes,Maya Singh; Noah Tran,maya.singh@example.ca; noah.tran@example.ca,",
+    );
+    expect(lines[1]).toContain("https://example.com/pocket-planners.pdf");
+    expect(lines[3]).toMatch(
+      /^Study Buddies,No,Kai Nguyen,.*,Not submitted,,,,$/,
+    );
   });
 
   it("create event renders the form and live preview", async () => {
