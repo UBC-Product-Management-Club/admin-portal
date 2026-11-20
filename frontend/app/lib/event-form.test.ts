@@ -1,3 +1,4 @@
+import { toDateTimeParts } from "~/lib/date-parts";
 import { buildEventChanges, toEventFormValues } from "~/lib/event-form";
 import { eventSchema } from "~/lib/types/event";
 
@@ -39,8 +40,8 @@ describe("buildEventChanges", () => {
   it("sends start and end together when either time changes", () => {
     const values = {
       ...toEventFormValues(event),
-      // Form fields are Vancouver time (PST): 20:00 is 04:00 UTC.
-      end: { date: "2026-11-06", time: "20:00" },
+      // Form fields are Vancouver time; let them work out which time that is.
+      end: toDateTimeParts("2026-11-07T04:00:00Z"),
     };
     expect(buildEventChanges(event, values)).toEqual({
       ok: true,

@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import { createRoutesStub, Outlet } from "react-router";
 
 import { ApiError } from "~/lib/api/rest-client";
+import { fromDateTimeParts } from "~/lib/date-parts";
 import { formatVancouverTime } from "~/lib/format";
 import { eventService } from "~/lib/services/event-service";
 import { reimbursementService } from "~/lib/services/reimbursement-service";
@@ -157,9 +158,10 @@ describe("portal pages (mock data)", () => {
     const time = screen.getByLabelText("New payment deadline time");
     await user.clear(time);
     await user.type(time, "20:00");
-    // The fields are Vancouver time: 20:00 PST is 04:00 UTC the next day.
-    const newDeadline = formatVancouverTime("2099-01-11T04:00:00.000Z");
-    expect(newDeadline).toMatch(/\bPST\b/);
+    // The fields are Vancouver time; its UTC offset depends on timezone data.
+    const newDeadline = formatVancouverTime(
+      fromDateTimeParts({ date: "2099-01-10", time: "20:00" })!,
+    );
 
     await user.click(screen.getByRole("button", { name: "Save deadline" }));
 
