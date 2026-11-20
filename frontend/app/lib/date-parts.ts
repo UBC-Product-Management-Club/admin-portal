@@ -1,13 +1,20 @@
-/** Split date + time fields, treated as UTC (HLD 3.3 "Date and time editing"). */
+import { wallClock } from "~/lib/format";
+
+/** Split date + time fields, entered and shown in Vancouver time (stored as UTC). */
 export type DateTimeParts = { date: string; time: string };
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
+const pad = (n: number) => String(n).padStart(2, "0");
+
 export function toDateTimeParts(iso: string | null): DateTimeParts {
   if (!iso) return { date: "", time: "" };
-  const value = new Date(iso).toISOString();
-  return { date: value.slice(0, 10), time: value.slice(11, 16) };
+  const { year, month, day, hour, minute } = wallClock(iso);
+  return {
+    date: `${year}-${pad(month)}-${pad(day)}`,
+    time: `${pad(hour)}:${pad(minute)}`,
+  };
 }
 
 /** True for real calendar dates only (JS would roll Feb 30 into Mar 2). */
@@ -29,5 +36,19 @@ export function fromDateTimeParts({
   time,
 }: DateTimeParts): string | null {
   if (!isValidDate(date) || !TIME_PATTERN.test(time)) return null;
-  return `${date}T${time}:00.000Z`;
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const asUtc = Date.UTC(year, month - 1, day, hour, minute);
+  // Shift by Vancouver's offset, then again in case that crossed a DST change.
+  let instant = asUtc - offsetAt(asUtc);
+  instant = asUtc - offsetAt(instant);
+  return new Date(instant).toISOString();
+}
+
+/** Vancouver's offset from UTC at an instant, in ms (e.g. -7h during PDT). */
+function offsetAt(instant: number) {
+  const { year, month, day, hour, minute } = wallClock(new Date(instant));
+  const seconds = new Date(instant).getUTCSeconds();
+  const ms = new Date(instant).getUTCMilliseconds();
+  return Date.UTC(year, month - 1, day, hour, minute, seconds, ms) - instant;
 }

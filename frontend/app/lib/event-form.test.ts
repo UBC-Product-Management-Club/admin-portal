@@ -39,7 +39,8 @@ describe("buildEventChanges", () => {
   it("sends start and end together when either time changes", () => {
     const values = {
       ...toEventFormValues(event),
-      end: { date: "2026-11-07", time: "04:00" },
+      // Form fields are Vancouver time (PST): 20:00 is 04:00 UTC.
+      end: { date: "2026-11-06", time: "20:00" },
     };
     expect(buildEventChanges(event, values)).toEqual({
       ok: true,

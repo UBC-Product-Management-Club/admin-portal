@@ -537,14 +537,16 @@ export const mockTeams: z.input<typeof eventTeamSchema>[] = mockSubmissions.map(
     members: team.members.map((member, i) => ({
       attendee_id: `att-${team.team_id}-${i}`,
       ...member,
+      status: "REGISTERED",
     })),
   }),
 );
 
 /** Attendees of the submission event who haven't joined a team. */
 export const mockTeamlessAttendees: z.input<typeof teamPersonSchema>[] =
-  mockUsers.slice(20, 26).map((user) => ({
+  mockUsers.slice(20, 26).map((user, i) => ({
     attendee_id: `att-${user.user_id}`,
     name: `${user.first_name} ${user.last_name}`,
     email: user.email,
+    status: i % 3 === 0 ? "ACCEPTED" : "REGISTERED",
   }));

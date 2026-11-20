@@ -27,6 +27,7 @@ import {
 import { fromDateTimeParts, toDateTimeParts } from "~/lib/date-parts";
 import { formatVancouverTime } from "~/lib/format";
 import { ApiError } from "~/lib/api/rest-client";
+import { cn } from "~/lib/utils";
 import { eventService } from "~/lib/services/event-service";
 import type { EventTeam, TeamList, TeamPerson } from "~/lib/types/team";
 
@@ -150,10 +151,26 @@ function TeamFormation({ teams, save, isSaving }: SectionProps) {
   );
 }
 
+type RsvpFilter = "all" | "rsvped" | "notRsvped";
+
 function NewTeam({ teams, save, isSaving }: SectionProps) {
   const [name, setName] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<RsvpFilter>("all");
   const tooBig = selected.size > teams.maxTeamSize;
+  const registeredCount = teams.unassigned.filter((p) => p.isRegistered).length;
+  const filterOptions: { value: RsvpFilter; label: string }[] = [
+    { value: "all", label: `All (${teams.unassigned.length})` },
+    { value: "rsvped", label: `RSVP'd (${registeredCount})` },
+    {
+      value: "notRsvped",
+      label: `Not RSVP'd (${teams.unassigned.length - registeredCount})`,
+    },
+  ];
+  const shown = teams.unassigned.filter(
+    (person) =>
+      filter === "all" || person.isRegistered === (filter === "rsvped"),
+  );
 
   function toggle(attendeeId: string) {
     setSelected((current) => {
@@ -179,16 +196,51 @@ function NewTeam({ teams, save, isSaving }: SectionProps) {
       aria-labelledby="new-team-heading"
       className="card-surface flex min-w-0 flex-[2_1_480px] flex-col gap-3.5 p-5"
     >
-      <h2 id="new-team-heading" className="text-base font-semibold">
-        Not on a team ({teams.unassigned.length})
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="new-team-heading" className="text-base font-semibold">
+          Not on a team ({teams.unassigned.length})
+        </h2>
+        {teams.unassigned.length > 0 && (
+          <div
+            role="group"
+            aria-label="Filter by RSVP"
+            className="flex gap-1 rounded-lg bg-muted p-1"
+          >
+            {filterOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={filter === option.value}
+                onClick={() => setFilter(option.value)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground",
+                  filter === option.value &&
+                    "bg-card text-foreground shadow-sm",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {teams.unassigned.length > 0 && (
+        <p className="text-[13px] text-muted-foreground">
+          Not RSVP'd means they were accepted but haven't confirmed their spot
+          yet.
+        </p>
+      )}
       {teams.unassigned.length === 0 ? (
         <p className="text-[13px] text-muted-foreground">
           Everyone attending is on a team.
         </p>
+      ) : shown.length === 0 ? (
+        <p className="text-[13px] text-muted-foreground">
+          No one here matches this filter.
+        </p>
       ) : (
         <ul className="grid max-h-56 grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-1 overflow-y-auto">
-          {teams.unassigned.map((person) => (
+          {shown.map((person) => (
             <li key={person.attendeeId}>
               <label className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-muted">
                 <input
@@ -198,7 +250,10 @@ function NewTeam({ teams, save, isSaving }: SectionProps) {
                   onChange={() => toggle(person.attendeeId)}
                 />
                 <span className="flex min-w-0 flex-col">
-                  <span className="text-sm">{person.name}</span>
+                  <span className="flex flex-wrap items-center gap-1.5 text-sm">
+                    {person.name}
+                    {!person.isRegistered && <NotRsvpedChip />}
+                  </span>
                   <span className="truncate text-xs text-muted-foreground">
                     {person.email}
                   </span>
@@ -333,7 +388,10 @@ function TeamRow({
             {team.members.map((member) => (
               <li key={member.attendeeId} className="flex items-center gap-1">
                 <span className="flex min-w-0 flex-col">
-                  <span>{member.name}</span>
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    {member.name}
+                    {!member.isRegistered && <NotRsvpedChip />}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {member.email}
                   </span>
@@ -523,6 +581,10 @@ function findPerson(
   return [...teams.unassigned, ...teams.teams.flatMap((t) => t.members)].find(
     (p) => p.attendeeId === attendeeId,
   );
+}
+
+function NotRsvpedChip() {
+  return <StatusChip tone="warning">Not RSVP'd</StatusChip>;
 }
 
 function TotalCard({ label, value }: { label: string; value: number }) {

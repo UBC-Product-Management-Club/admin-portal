@@ -3,7 +3,13 @@ import { z } from "zod";
 
 import { HttpError } from "./http-error.js";
 
-export type TeamPerson = { attendee_id: string; name: string; email: string };
+export type TeamPerson = {
+  attendee_id: string;
+  name: string;
+  email: string;
+  // REGISTERED has confirmed their spot; ACCEPTED was let in but hasn't yet.
+  status: string;
+};
 
 export type EventTeam = {
   team_id: string;
@@ -72,7 +78,11 @@ const teamSchema = z.object({
   Team_Member: z.array(
     z.object({
       Attendee: z
-        .object({ attendee_id: z.string(), User: userSchema })
+        .object({
+          attendee_id: z.string(),
+          status: z.string(),
+          User: userSchema,
+        })
         .nullable(),
     }),
   ),
@@ -80,6 +90,7 @@ const teamSchema = z.object({
 
 const attendeeSchema = z.object({
   attendee_id: z.string(),
+  status: z.string(),
   User: userSchema,
 });
 
@@ -95,13 +106,13 @@ export function createTeamStore(db: SupabaseClient): TeamStore {
       db
         .from("Team")
         .select(
-          "team_id,team_name,team_code,Team_Member(Attendee(attendee_id,User(first_name,last_name,email)))",
+          "team_id,team_name,team_code,Team_Member(Attendee(attendee_id,status,User(first_name,last_name,email)))",
         )
         .eq("event_id", eventId)
         .order("team_name"),
       db
         .from("Attendee")
-        .select("attendee_id,User(first_name,last_name,email)")
+        .select("attendee_id,status,User(first_name,last_name,email)")
         .eq("event_id", eventId)
         .in("status", GOING_STATUSES)
         .order("created_at"),
@@ -239,12 +250,14 @@ export function createTeamStore(db: SupabaseClient): TeamStore {
 
 function toPerson({
   attendee_id,
+  status,
   User,
 }: z.infer<typeof attendeeSchema>): TeamPerson {
   return {
     attendee_id,
     name: User ? `${User.first_name} ${User.last_name}` : "Unknown attendee",
     email: User?.email ?? "",
+    status,
   };
 }
 

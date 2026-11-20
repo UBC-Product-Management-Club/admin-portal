@@ -10,7 +10,7 @@ type DateTimeFieldProps = {
   required?: boolean;
 };
 
-/** Separate date and time inputs, handled as UTC (HLD 3.3). */
+/** Separate date and time inputs, in Vancouver time. */
 export function DateTimeField({
   legend,
   value,
@@ -22,7 +22,9 @@ export function DateTimeField({
     <fieldset className="flex min-w-0 flex-col gap-1.5">
       <legend className="mb-1.5 text-[13px] font-medium text-neutral-foreground">
         {legend}{" "}
-        <span className="font-normal text-muted-foreground">(UTC)</span>
+        <span className="font-normal text-muted-foreground">
+          (Pacific time)
+        </span>
       </legend>
       <div className="grid grid-cols-[1.4fr_1fr] gap-2">
         <label htmlFor={`${id}-date`} className="sr-only">

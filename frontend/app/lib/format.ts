@@ -1,5 +1,5 @@
-/** All dates are shown in UTC to match how they're stored (HLD 3.3). */
-const TIME_ZONE = "UTC";
+/** Dates are stored in UTC but shown and edited in Vancouver time, where PMC runs. */
+export const TIME_ZONE = "America/Vancouver";
 
 const dateFormat = new Intl.DateTimeFormat("en-CA", {
   timeZone: TIME_ZONE,
@@ -22,15 +22,24 @@ const timeFormat = new Intl.DateTimeFormat("en-CA", {
   hour: "numeric",
   minute: "2-digit",
 });
-// Deadlines are promised to members in local time, so show it alongside UTC.
+// Deadlines carry the zone name (PST/PDT) so there's no doubt which time is meant.
 const vancouverFormat = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Vancouver",
+  timeZone: TIME_ZONE,
   weekday: "short",
   month: "short",
   day: "numeric",
   hour: "numeric",
   minute: "2-digit",
   timeZoneName: "short",
+});
+const partsFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
 });
 const currencyFormat = new Intl.NumberFormat("en-CA", {
   style: "currency",
@@ -57,7 +66,7 @@ export function monthAbbreviation(iso: string) {
 }
 
 export function dayOfMonth(iso: string) {
-  return new Date(iso).getUTCDate();
+  return wallClock(iso).day;
 }
 
 /** "In 3 days" / "Tomorrow" / "Today", for upcoming events. */
@@ -71,10 +80,25 @@ export function formatRelativeDays(iso: string, now = new Date()) {
 
 /** School years run September to August, e.g. "2026-2027". */
 export function schoolYearOf(iso: string) {
-  const date = new Date(iso);
-  const year = date.getUTCFullYear();
-  const startYear = date.getUTCMonth() >= 8 ? year : year - 1;
+  const { year, month } = wallClock(iso);
+  const startYear = month >= 9 ? year : year - 1;
   return `${startYear}-${startYear + 1}`;
+}
+
+/** The Vancouver calendar date and time of an instant, as numbers (month is 1-12). */
+export function wallClock(iso: string | Date) {
+  const parts = Object.fromEntries(
+    partsFormat
+      .formatToParts(new Date(iso))
+      .map((part) => [part.type, Number(part.value)]),
+  );
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    hour: parts.hour,
+    minute: parts.minute,
+  };
 }
 
 export function initials(firstName: string, lastName = "") {

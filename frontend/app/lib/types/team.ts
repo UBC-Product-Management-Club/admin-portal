@@ -1,11 +1,18 @@
 import { z } from "zod";
 
 export const teamPersonSchema = z
-  .object({ attendee_id: z.string(), name: z.string(), email: z.string() })
+  .object({
+    attendee_id: z.string(),
+    name: z.string(),
+    email: z.string(),
+    status: z.string(),
+  })
   .transform((person) => ({
     attendeeId: person.attendee_id,
     name: person.name,
     email: person.email,
+    // ACCEPTED people were let in but haven't confirmed (paid or registered) yet.
+    isRegistered: person.status === "REGISTERED",
   }));
 
 export const eventTeamSchema = z

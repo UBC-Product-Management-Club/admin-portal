@@ -21,7 +21,13 @@ const TEAMS = [
     team_name: "Alpha",
     team_code: "2N2CG",
     Team_Member: [
-      { Attendee: { attendee_id: "a1", User: user("Ava") } },
+      {
+        Attendee: {
+          attendee_id: "a1",
+          status: "REGISTERED",
+          User: user("Ava"),
+        },
+      },
       { Attendee: null },
     ],
   },
@@ -29,9 +35,9 @@ const TEAMS = [
 ];
 
 const ATTENDEES = [
-  { attendee_id: "a1", User: user("Ava") },
-  { attendee_id: "a2", User: user("Noah") },
-  { attendee_id: "a3", User: null },
+  { attendee_id: "a1", status: "REGISTERED", User: user("Ava") },
+  { attendee_id: "a2", status: "ACCEPTED", User: user("Noah") },
+  { attendee_id: "a3", status: "REGISTERED", User: null },
 ];
 
 type Result = { data: unknown; error: unknown };
@@ -118,7 +124,14 @@ describe("createTeamStore", () => {
           team_id: "t1",
           team_name: "Alpha",
           team_code: "2N2CG",
-          members: [{ attendee_id: "a1", name: "Ava Lee", email: "Ava@x.ca" }],
+          members: [
+            {
+              attendee_id: "a1",
+              name: "Ava Lee",
+              email: "Ava@x.ca",
+              status: "REGISTERED",
+            },
+          ],
         },
         {
           team_id: "t2",
@@ -128,8 +141,18 @@ describe("createTeamStore", () => {
         },
       ],
       unassigned: [
-        { attendee_id: "a2", name: "Noah Lee", email: "Noah@x.ca" },
-        { attendee_id: "a3", name: "Unknown attendee", email: "" },
+        {
+          attendee_id: "a2",
+          name: "Noah Lee",
+          email: "Noah@x.ca",
+          status: "ACCEPTED",
+        },
+        {
+          attendee_id: "a3",
+          name: "Unknown attendee",
+          email: "",
+          status: "REGISTERED",
+        },
       ],
     });
   });

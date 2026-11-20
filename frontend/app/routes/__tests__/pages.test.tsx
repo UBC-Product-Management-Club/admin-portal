@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentType } from "react";
 import { createRoutesStub, Outlet } from "react-router";
@@ -157,11 +157,9 @@ describe("portal pages (mock data)", () => {
     const time = screen.getByLabelText("New payment deadline time");
     await user.clear(time);
     await user.type(time, "20:00");
-    const newDeadline = formatVancouverTime("2099-01-10T20:00:00.000Z");
-    expect(newDeadline).toMatch(/\bP[DS]T\b/);
-    expect(
-      screen.getByText(`In Vancouver: ${newDeadline}`),
-    ).toBeInTheDocument();
+    // The fields are Vancouver time: 20:00 PST is 04:00 UTC the next day.
+    const newDeadline = formatVancouverTime("2099-01-11T04:00:00.000Z");
+    expect(newDeadline).toMatch(/\bPST\b/);
 
     await user.click(screen.getByRole("button", { name: "Save deadline" }));
 
@@ -365,6 +363,15 @@ describe("portal pages (mock data)", () => {
     expect(
       screen.getByRole("heading", { name: "Not on a team (6)" }),
     ).toBeInTheDocument();
+
+    // Two of the six teamless mocks were accepted but haven't RSVP'd.
+    await user.click(screen.getByRole("button", { name: "Not RSVP'd (2)" }));
+    const teamless = screen.getByRole("heading", { name: "Not on a team (6)" })
+      .parentElement!.parentElement!;
+    expect(within(teamless).getAllByRole("checkbox")).toHaveLength(2);
+    expect(within(teamless).getAllByText("Not RSVP'd")).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: "All (6)" }));
+    expect(within(teamless).getAllByRole("checkbox")).toHaveLength(6);
 
     await user.click(
       screen.getByRole("button", {

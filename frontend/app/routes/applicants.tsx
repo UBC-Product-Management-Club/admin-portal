@@ -427,11 +427,6 @@ function PaymentDueForm({
         value={parts}
         onChange={setParts}
       />
-      {dueAt && (
-        <p className="text-[13px] text-muted-foreground">
-          In Vancouver: {formatVancouverTime(dueAt)}
-        </p>
-      )}
       {error && (
         <p role="alert" className="text-[13px] text-destructive">
           {error}
