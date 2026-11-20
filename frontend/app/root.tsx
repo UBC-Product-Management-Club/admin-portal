@@ -13,6 +13,11 @@ import "./app.css";
 
 export const meta: Route.MetaFunction = () => [{ title: "PMC Admin Portal" }];
 
+export const links: Route.LinksFunction = () => [
+  { rel: "icon", href: "/favicon.ico", sizes: "any" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+];
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
